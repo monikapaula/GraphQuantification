@@ -23,4 +23,4 @@ class MLP(nn.Module):
         x = F.relu(x)
         x = self.dropout(x)
         x = self.lin2(x)
-        return F.log_softmax(x, dim=-1)
+        return F.softmax(x, dim=-1)

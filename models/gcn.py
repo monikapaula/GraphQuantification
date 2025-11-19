@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
@@ -9,7 +8,7 @@ class GCN(nn.Module):
     (https://github.com/senadkurtisi/pytorch-GCN/tree/main/data)
     """
 
-    def __init__(self, in_dim: int, hidden_dim:int, out_dim: int, droput, use_bias=True):
+    def __init__(self, in_dim: int, hidden_dim:int, out_dim: int, dropout, use_bias=True):
         super(GCN,self).__init__()
         self.in_dim = in_dim
         self.out_channels = out_dim
@@ -17,10 +16,15 @@ class GCN(nn.Module):
 
         self.conv1 = GCNConv(in_dim, hidden_dim, use_bias)
         self.conv2 = GCNConv(hidden_dim, out_dim, use_bias)
-        self.dropout = nn.Dropout(p=droput)
+        self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, edge_index ):
+        """
+        x : node features
+        edge_index : adjacency matrix of edges
+        return: tensor of posterior probabilities
+        """
         x = F.relu(self.conv1(x, edge_index))
         x = self.dropout(x)
         x = self.conv2(x, edge_index)
-        return F.log_softmax(x, dim=1)
+        return F.softmax(x, dim=1)
