@@ -1,9 +1,14 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
+import torch
 
-FEATURES_PATH = 'data/twitch_gamers/twitch_gamers_features_de.csv'
-EDGES_PATH = 'data/twitch_gamers/twitch_gamers_edges_de.csv'
+from sklearn.preprocessing import StandardScaler
+from pathlib import Path
+from torch_geometric.data import Data
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+FEATURES_PATH = BASE_DIR/'data/twitch_gamers/twitch_gamers_features_de.csv'
+EDGES_PATH = BASE_DIR/'data/twitch_gamers/twitch_gamers_edges_de.csv'
 
 TRAIN_RATIO = 0.10 #Top 10% (by views)
 VALIDATION_RATIO = 0.10
@@ -24,20 +29,17 @@ def normalize_features(features_df):
     """
     Normalization of features_df
     :param features_df:
-    :return: X,Y
+    :return: normalized features_df
     """
     features_df = features_df[['views','mature','life_time','affiliate']].copy()
     scaler= StandardScaler()
     norm_cols = ['views','life_time']
     features_df [norm_cols] = scaler.fit_transform(features_df[norm_cols])
 
-    print('Normalization:', features_df.head())
-    X = features_df.values
-    Y = features_df['dead_account'].values
+    #print('Normalization:', features_df.head())
+    return features_df
 
-    return X, Y
-
-def create_split(features_df, edges_df):
+def create_split(features_df):
     """
     Creates training, validation and test split based on the top 10% of streamers (in views)
     :return: train, validation and test mask
@@ -60,7 +62,36 @@ def create_split(features_df, edges_df):
     train_mask[train_nodes] = True
     val_mask[val_nodes] = True
     test_mask[test_nodes] = True
+    print('Train Nodes:', len(train_nodes))
 
     return train_mask, val_mask, test_mask
 
+def get_masks(features_path=FEATURES_PATH, edges_path=EDGES_PATH):
 
+    features_df, edges_df = load_data(features_path, edges_path)
+
+    Y = features_df['dead_account'].values
+    X = normalize_features(features_df)
+    edge_index = edges_df.values.T
+    #print ('Edge index shape:', edge_index.shape)
+    #print( 'Features shape:', X.shape)
+    #print( 'Labels shape:', Y.shape)
+
+    X_np = X.values
+    X_tensor = torch.from_numpy(X_np).float()
+    edge_index = torch.from_numpy(edge_index).long()
+    Y_tensor = torch.from_numpy(Y).long()
+    data = Data(x=X_tensor, edge_index=edge_index, y=Y_tensor)
+
+    print(X_tensor.shape)
+    train_np, val_np, test_np = create_split(X)
+
+    train_mask =torch.from_numpy(train_np).to(torch.bool)
+    val_mask = torch.from_numpy(val_np).to(torch.bool)
+    test_mask = torch.from_numpy(test_np).to(torch.bool)
+
+    print('Training mask:', len(train_mask))
+    return data, train_mask, val_mask, test_mask
+
+if __name__ == "__main__":
+    data, train_m, val_m, test_m = get_masks()
