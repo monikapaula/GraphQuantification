@@ -1,29 +1,29 @@
-import pandas as pd
 import numpy as np
 import torch
 
 from sklearn.preprocessing import StandardScaler
 from pathlib import Path
 from torch_geometric.data import Data
+from data_loader import load_dataset
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-FEATURES_PATH = BASE_DIR/'data/twitch_gamers/twitch_gamers_features_de.csv'
-EDGES_PATH = BASE_DIR/'data/twitch_gamers/twitch_gamers_edges_de.csv'
+DATA_ZIP_PATH = BASE_DIR/'data/twitch_gamers/twitch_gamers_de.zip'
+EXTRACT_DIR = BASE_DIR/'data/twitch_gamers/'
 
-TRAIN_RATIO = 0.10 #Top 10% (by views)
-VALIDATION_RATIO = 0.10
+TRAIN_RATIO = 0.010 #Top 10% (by views)
+VALIDATION_RATIO = 0.010
 TEST_RATIO = 1.0 - TRAIN_RATIO - VALIDATION_RATIO
 
-def load_data(features_path, edges_path):
+def load_data():
+    feature_name = 'twitch_gamers_features_de.csv'
+    edges_name = 'twitch_gamers_edges_de.csv'
 
-    try:
-        features_df = pd.read_csv(features_path)
-        edges_df = pd.read_csv(edges_path)
-        print("Loaded features and edges")
-        return features_df, edges_df
-    except FileNotFoundError:
-        print('File not found')
-        return None, None
+    return load_dataset(
+        DATA_ZIP_PATH,
+        EXTRACT_DIR,
+        feature_name,
+        edges_name
+    )
 
 def normalize_features(features_df):
     """
@@ -66,12 +66,13 @@ def create_split(features_df):
 
     return train_mask, val_mask, test_mask
 
-def get_masks(features_path=FEATURES_PATH, edges_path=EDGES_PATH):
+def get_masks():
 
-    features_df, edges_df = load_data(features_path, edges_path)
+    features_df, edges_df = load_data()
 
     Y = features_df['dead_account'].values
     X = normalize_features(features_df)
+    #print ('Normalized features:', X)
     edge_index = edges_df.values.T
     #print ('Edge index shape:', edge_index.shape)
     #print( 'Features shape:', X.shape)

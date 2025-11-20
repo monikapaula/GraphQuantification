@@ -3,6 +3,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 from splits.twitch_gamers_split import get_masks
+from splits.presidential_el_split import get_mask
 from models.gcn import GCN
 from models.mlp import MLP
 
@@ -67,15 +68,14 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask):
         train_acc = evaluate(model, x, edge_index, train_mask, y)
         val_acc = evaluate(model, x, edge_index, val_mask, y)
 
-        if epoch % epoch == config['epochs']:
-            print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
+        print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
 
 
     test_acc = evaluate(model, x, edge_index, test_mask,y)
     print(f"Test Accuracy: {test_acc:.4f}")
 
 if __name__ == '__main__':
-    data, train_mask, val_mask, test_mask = get_masks()
+    data, train_mask, val_mask, test_mask = get_mask()
     train(
         config=MODEL_CONFIG,
         x = data.x,
