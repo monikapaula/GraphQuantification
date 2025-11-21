@@ -18,9 +18,10 @@ class MLP(nn.Module):
         self.lin2 = nn.Linear(hidden_dim, out_dim)
         self.dropout = nn.Dropout(p=dropout)
 
-    def forward(self, x):
+    def forward(self, x, edge_index=None):
+
         x = self.lin1(x)
         x = F.relu(x)
         x = self.dropout(x)
         x = self.lin2(x)
-        return F.softmax(x, dim=-1)
+        return F.log_softmax(x, dim=-1)

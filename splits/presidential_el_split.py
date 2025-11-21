@@ -26,15 +26,36 @@ def load_data():
         edges_name
     )
 
-def normalize_features(features_df):
+def normalize_features(features_df, train_mask):
     """
     Normalization of features using Z-score normalization
     return: normalized and cleaned features_df
     """
-    norm_cols = ['Mean income (dollars)','Total Population']
+    norm_cols = [
+        'Mean income (dollars)',
+        'Total Population',
+        'Population with less than 9th grade education',
+        'Population with 9th to 12th grade education, no diploma',
+        'High School graduate and equivalent',
+        'Some College,No Degree',
+        'Associates Degree',
+        'Bachelors Degree',
+        'Graduate or professional degree',
+        'Gini Index',
+        'Density per square km',
+        'Hispanic or Latino percentage',
+        'NH-White percentage',
+        'NH-Black percentage',
+        'Percentage engaged in Management, business, science, and arts occupations',
+        'Percentage engaged in Service Occupations',
+        'Percentage engaged in Sales and Office',
+        'Percentage engaged in Resources and Construction',
+        'Percentage engaged in Transportation'
+    ]
     features_df[norm_cols] = features_df[norm_cols].apply(pd.to_numeric, errors='coerce').fillna(features_df[norm_cols].mean())
     scaler= StandardScaler()
-    features_df [norm_cols] = scaler.fit_transform(features_df[norm_cols])
+    scaler.fit(features_df.loc[train_mask, norm_cols])
+    features_df[norm_cols] = scaler.transform(features_df[norm_cols])
     return features_df [norm_cols].copy()
 
 def create_split(features_df):
@@ -64,15 +85,31 @@ def create_split(features_df):
 
     return train_mask, val_mask, test_mask
 
+def compute_class_weights(y):
+    """
+    Compute class weights to handle class imbalance
+    total_samples / (num_classes * num_samples_per_class)
+    """
+    #classes, counts = y.unqiue(return_counts=True)
+    #total_samples = y.size(0)
+    #num_classes = len(classes)
+
+    #weights = total_samples/ (num_classes * counts.float())
+    weights = torch.tensor([8.0,1.0])
+    return weights
+
 def get_mask():
 
     features_df, edges_df = load_data()
-    Y = features_df['Label'].values
+    # Label encoding
+    # 1: Republican, 0: Democrat
+    Y = features_df['Label (County)'].values
     print('Label values:', Y)
     label_encoder = LabelEncoder()
     Y = label_encoder.fit_transform(Y)
-    print('Label encoded:', Y)
-    X = normalize_features(features_df)
+
+    train_mask, val_mask, test_mask = create_split(features_df)
+    X = normalize_features(features_df, train_mask)
 
     edge_index = edges_df.values.T
     print('edge index:', edge_index)
@@ -82,11 +119,8 @@ def get_mask():
     print('X_tensor:', X_tensor)
     Y_tensor = torch.from_numpy(Y).long()
     edge_index_tensor = torch.from_numpy(edge_index).long()
-    print('edge index tensor:', edge_index_tensor)
 
     data = Data(x=X_tensor, edge_index=edge_index_tensor, y=Y_tensor)
-
-    train_mask, val_mask, test_mask = create_split(X)
 
     train_mask =torch.from_numpy(train_mask).to(torch.bool)
     val_mask = torch.from_numpy(val_mask).to(torch.bool)
