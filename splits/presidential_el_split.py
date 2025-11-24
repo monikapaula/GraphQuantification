@@ -90,12 +90,12 @@ def compute_class_weights(y):
     Compute class weights to handle class imbalance
     total_samples / (num_classes * num_samples_per_class)
     """
-    #classes, counts = y.unqiue(return_counts=True)
-    #total_samples = y.size(0)
-    #num_classes = len(classes)
+    classes, counts = y.unique(return_counts=True)
+    total_samples = y.size(0)
+    num_classes = len(classes)
 
-    #weights = total_samples/ (num_classes * counts.float())
-    weights = torch.tensor([8.0,1.0])
+    weights = total_samples/ (num_classes * counts.float())
+
     return weights
 
 def get_mask():

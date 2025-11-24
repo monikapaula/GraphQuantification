@@ -1,21 +1,24 @@
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
+import os
 from sklearn.metrics import f1_score, confusion_matrix, classification_report
 
 from splits.twitch_gamers_split import get_masks
-from splits.presidential_el_split import get_mask
+from splits.presidential_el_split import get_mask, compute_class_weights
 from models.gcn import GCN
 from models.mlp import MLP
+from loss.focal_loss import FocalLoss
 
 MODEL_CONFIG = {
-    'name': 'MLP',
+    'name': 'GCN',
     'input_dim': None,
     'hidden_dim': 64,
     'output_dim': 2,
     'dropout': 0.5,
     'lr': 1e-3,
-    'epochs': 300
+    'epochs': 300,
+    'save_model': True
 }
 
 def load_model(config:dict):
@@ -62,7 +65,7 @@ def extensive_evaluate(model, x, edge_index, mask, y):
     return marco_f1
 
 
-def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, class_weights=None):
+def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, class_weights=None, dataset_name='presidential_election'):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     config['input_dim'] = x.size(1)
@@ -75,6 +78,9 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
     if class_weights is not None:
         class_weights = class_weights.to(device)
 
+    #gamma parameter for focusing on hard examples
+    criterion = FocalLoss(alpha=class_weights, gamma=4.0)
+
     print(f"---Starting training for {config['epochs']} epochs---")
 
     for epoch in range(1, config['epochs']+1):
@@ -84,7 +90,8 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
 
         #output the log-probabilities
         log_probabilities = model(x, edge_index)
-        loss = F.nll_loss(log_probabilities[train_mask], y[train_mask], weight=class_weights)
+        #loss = F.nll_loss(log_probabilities[train_mask], y[train_mask], weight=class_weights)
+        loss = criterion(log_probabilities[train_mask], y[train_mask])
 
         loss.backward()
         optimizer.step()
@@ -99,8 +106,22 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
     test_acc = extensive_evaluate(model, x, edge_index, test_mask,y)
     print(f"Macro F1-Score: {test_acc:.4f}")
 
+    if config.get('save_model', False):
+        model_name = config.get('name','model')
+
+        filename = f"{model_name}_{dataset_name}.pth"
+        save_dir = "saved_models"
+
+        os.makedirs(save_dir, exist_ok=True)
+        save_path = os.path.join(save_dir, filename)
+
+        torch.save(model.state_dict(), save_path)
+    return model
+
 if __name__ == '__main__':
     data, train_mask, val_mask, test_mask = get_mask()
+    y_train = data.y[train_mask]
+    weights = compute_class_weights(y_train)
     train(
         config=MODEL_CONFIG,
         x = data.x,
@@ -108,8 +129,11 @@ if __name__ == '__main__':
         y = data.y,
         train_mask = train_mask,
         val_mask = val_mask,
-        test_mask = test_mask
+        test_mask = test_mask,
+        class_weights = weights,
+        dataset_name = 'presidential_election'
     )
+
 
 
 
