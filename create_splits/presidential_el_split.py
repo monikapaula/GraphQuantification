@@ -3,35 +3,18 @@ import pandas as pd
 import torch
 
 from sklearn.preprocessing import StandardScaler, LabelEncoder
-from pathlib import Path
 from torch_geometric.data import Data
-from data_loader import load_dataset
+from data_loader import load_dataset, DATASET_CONFIGS
+from create_splits.split_manager import save_split, load_split
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_ZIP_PATH = BASE_DIR/'data/presidential_election/presidential_election.zip'
-EXTRACT_DIR = BASE_DIR/'data/presidential_election/'
+DATASET_NAME = 'presidential_election'
+CONFIG = DATASET_CONFIGS[DATASET_NAME]
 
 TRAIN_RATIO = 0.6
 VALIDATION_RATIO = 0.1
 TEST_RATIO = 1.0 - TRAIN_RATIO - VALIDATION_RATIO
 
-def load_data():
-    feature_name = 'presidential_election_nodes.csv'
-    edges_name = 'presidential_election_edges.csv'
-
-    return load_dataset(
-        DATA_ZIP_PATH,
-        EXTRACT_DIR,
-        feature_name,
-        edges_name
-    )
-
-def normalize_features(features_df, train_mask):
-    """
-    Normalization of features using Z-score normalization
-    return: normalized and cleaned features_df
-    """
-    norm_cols = [
+NORM_COLS = [
         'Mean income (dollars)',
         'Total Population',
         'Population with less than 9th grade education',
@@ -51,19 +34,46 @@ def normalize_features(features_df, train_mask):
         'Percentage engaged in Sales and Office',
         'Percentage engaged in Resources and Construction',
         'Percentage engaged in Transportation'
-    ]
-    features_df[norm_cols] = features_df[norm_cols].apply(pd.to_numeric, errors='coerce').fillna(features_df[norm_cols].mean())
-    scaler= StandardScaler()
-    scaler.fit(features_df.loc[train_mask, norm_cols])
-    features_df[norm_cols] = scaler.transform(features_df[norm_cols])
-    return features_df [norm_cols].copy()
+]
 
-def create_split(features_df):
+def load_data():
+    features_df, edges_df = load_dataset(
+        zip_path= CONFIG['zip_path'],
+        extract_dir= CONFIG['extract_dir'],
+        feature_filename= CONFIG['feature_filename'],
+        edges_filename=CONFIG['edges_filename'],
+    )
+    return features_df, edges_df
+
+def encode_labels(features_df):
+    #1: Republican, 0: Democrat
+    encoder = LabelEncoder()
+    encoded_labels = encoder.fit_transform(features_df['Label (County)'].values)
+    return encoded_labels
+
+def preprocess_features(df):
+    df_clean = df.copy()
+    df_clean = df_clean[NORM_COLS].apply(pd.to_numeric, errors='coerce')
+    df_clean = df_clean[NORM_COLS].fillna(df_clean[NORM_COLS].mean())
+    return df_clean
+
+def normalize_features(features_df, train_mask):
+    """
+    Normalization of features using Z-score normalization
+    return: normalized and cleaned features_df
+    """
+    scaler = StandardScaler()
+    scaler.fit(features_df.loc[train_mask,NORM_COLS])
+    scaled_features_df = scaler.transform(features_df[NORM_COLS])
+
+    return scaled_features_df.copy()
+
+
+def create_random_split(num_nodes):
     """
     trying a random split where different counties are randomly assigned to train, val and test (should mimic real-world)
     :return: train, validation and test mask
     """
-    num_nodes = len(features_df.index)
 
     train_size = int(num_nodes * TRAIN_RATIO)
     val_size = int(num_nodes * VALIDATION_RATIO)
@@ -98,29 +108,35 @@ def compute_class_weights(y):
 
     return weights
 
-def get_mask():
+def manage_splits(split_name, num_nodes):
+    if split_name:
+        try:
+            return load_split(DATASET_NAME,split_name, num_nodes)
+        except FileNotFoundError:
+            print('Dataset not found. Creating splits...')
+            train_mask, val_mask, test_mask = create_random_split(num_nodes)
+            save_split(DATASET_NAME, split_name, train_mask, val_mask, test_mask)
+    return create_random_split(num_nodes)
+
+
+def get_dataset(split_name= None):
 
     features_df, edges_df = load_data()
-    # Label encoding
-    # 1: Republican, 0: Democrat
-    Y = features_df['Label (County)'].values
-    print('Label values:', Y)
-    label_encoder = LabelEncoder()
-    Y = label_encoder.fit_transform(Y)
+    num_nodes = len(features_df)
 
-    train_mask, val_mask, test_mask = create_split(features_df)
-    X = normalize_features(features_df, train_mask)
+    train_mask, val_mask, test_mask = manage_splits(split_name, num_nodes)
 
-    edge_index = edges_df.values.T
-    print('edge index:', edge_index)
-    X_np = X.values
-    print(X_np.shape)
+    Y_np = encode_labels(features_df)
+    features_df = preprocess_features(features_df)
+    X_np = normalize_features(features_df, train_mask)
+    edge_index_np = edges_df.values.T
+
+
     X_tensor = torch.from_numpy(X_np).float()
-    print('X_tensor:', X_tensor)
-    Y_tensor = torch.from_numpy(Y).long()
-    edge_index_tensor = torch.from_numpy(edge_index).long()
+    edge_index = torch.from_numpy(edge_index_np).long()
+    Y_tensor = torch.from_numpy(Y_np).long()
 
-    data = Data(x=X_tensor, edge_index=edge_index_tensor, y=Y_tensor)
+    data = Data(x=X_tensor, edge_index=edge_index, y=Y_tensor)
 
     train_mask =torch.from_numpy(train_mask).to(torch.bool)
     val_mask = torch.from_numpy(val_mask).to(torch.bool)
@@ -130,5 +146,5 @@ def get_mask():
 
 
 if __name__ == '__main__':
-    data, train_mask, val_mask, test_mask = get_mask()
+    data, train_mask, val_mask, test_mask = get_dataset(split_name='split_0')
 

@@ -4,8 +4,8 @@ import torch.nn.functional as F
 import os
 from sklearn.metrics import f1_score, confusion_matrix, classification_report
 
-from splits.twitch_gamers_split import get_masks
-from splits.presidential_el_split import get_mask, compute_class_weights
+from create_splits.twitch_gamers_split import get_masks
+from create_splits.presidential_el_split import get_mask, compute_class_weights
 from models.gcn import GCN
 from models.mlp import MLP
 from loss.focal_loss import FocalLoss
@@ -119,9 +119,12 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
     return model
 
 if __name__ == '__main__':
-    data, train_mask, val_mask, test_mask = get_mask()
+    DATASET = 'presidential_election'
+    SPLIT_NAME = 'split_0'
+    data, train_mask, val_mask, test_mask = get_mask(split_name=SPLIT_NAME)
     y_train = data.y[train_mask]
     weights = compute_class_weights(y_train)
+    run_name = f"{DATASET}_{SPLIT_NAME}"
     train(
         config=MODEL_CONFIG,
         x = data.x,
@@ -131,7 +134,7 @@ if __name__ == '__main__':
         val_mask = val_mask,
         test_mask = test_mask,
         class_weights = weights,
-        dataset_name = 'presidential_election'
+        dataset_name = run_name
     )
 
 

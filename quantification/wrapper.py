@@ -28,7 +28,8 @@ class WrapperClassifier(BaseEstimator, ClassifierMixin):
 
     def fit(self, X, y=None):
         # No fitting necessary as the classifier is pre-trained
-        self._precompute()
+        if self._precomputed_probs is None:
+            self._precompute()
         return self
 
     def predict(self, X):
@@ -36,5 +37,5 @@ class WrapperClassifier(BaseEstimator, ClassifierMixin):
         return np.argmax(probs, axis=1)
 
     def predict_proba(self, X):
-        indies = np.array(X).flatten()
-        return self._precomputed_probs[indies]
+        indices = np.array(X).flatten()
+        return self._precomputed_probs[indices]
