@@ -1,14 +1,13 @@
 import torch
 import torch.optim as optim
-import torch.nn.functional as F
 import os
-from sklearn.metrics import f1_score, confusion_matrix, classification_report
 
-from create_splits.twitch_gamers_split import get_masks
-from create_splits.presidential_el_split import get_mask, compute_class_weights
+from create_splits.presidential_el_split import compute_class_weights, get_dataset
+from utils.metrics import classifier_mae, extensive_evaluate
 from models.gcn import GCN
 from models.mlp import MLP
-from loss.focal_loss import FocalLoss
+from utils.focal_loss import FocalLoss
+from utils.save_model import save_model
 
 MODEL_CONFIG = {
     'name': 'GCN',
@@ -43,26 +42,6 @@ def evaluate(model, x, edge_index, mask, y):
         corr = pred.eq(y[mask]).sum().item()
         acc = corr / mask.sum().item()
     return acc
-
-def extensive_evaluate(model, x, edge_index, mask, y):
-    model.eval()
-    with torch.no_grad():
-        out = model(x, edge_index)
-        pred = out.argmax(dim=1)
-
-        y_true = y[mask].cpu().numpy()
-        y_pred = pred[mask].cpu().numpy()
-
-        cm = confusion_matrix(y_true, y_pred)
-        print("\n--- Confusion Matrix ---")
-        print(f"[[TN (Dem richtig): {cm[0][0]}, FP (Dem falsch als Rep): {cm[0][1]}]")
-        print(f" [FN (Rep falsch als Dem): {cm[1][0]}, TP (Rep richtig): {cm[1][1]}]]")
-
-        print("\n--- Classification Report ---")
-        print(classification_report(y_true, y_pred, target_names=['Democrat', 'Republican']))
-
-    marco_f1= f1_score(y_true, y_pred, average='macro')
-    return marco_f1
 
 
 def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, class_weights=None, dataset_name='presidential_election'):
@@ -102,26 +81,27 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
 
         print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
 
-
+    # evaluation on test set using F1 and MAE
     test_acc = extensive_evaluate(model, x, edge_index, test_mask,y)
     print(f"Macro F1-Score: {test_acc:.4f}")
 
+    with torch.no_grad():
+        out = model(x, edge_index)
+        pred = out.argmax(dim=1)
+        y_true = y[test_mask].cpu().numpy()
+        y_pred = pred[test_mask].cpu().numpy()
+
+        mae, true_prev, pred_prev = classifier_mae(y_pred, y_true)
+        print(f"Classifier MAE on test set: {mae:.4f}")
+
     if config.get('save_model', False):
-        model_name = config.get('name','model')
-
-        filename = f"{model_name}_{dataset_name}.pth"
-        save_dir = "saved_models"
-
-        os.makedirs(save_dir, exist_ok=True)
-        save_path = os.path.join(save_dir, filename)
-
-        torch.save(model.state_dict(), save_path)
+        save_model(model, config, dataset_name=run_name)
     return model
 
 if __name__ == '__main__':
     DATASET = 'presidential_election'
     SPLIT_NAME = 'split_0'
-    data, train_mask, val_mask, test_mask = get_mask(split_name=SPLIT_NAME)
+    data, train_mask, val_mask, test_mask = get_dataset(split_name=SPLIT_NAME)
     y_train = data.y[train_mask]
     weights = compute_class_weights(y_train)
     run_name = f"{DATASET}_{SPLIT_NAME}"

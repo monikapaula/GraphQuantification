@@ -8,11 +8,11 @@ class WrapperClassifier(BaseEstimator, ClassifierMixin):
         self.model = model
         self.data = data
         self.device = device
-        self.classes = np.unique(data.y.cpu().numpy())
+        self.classes_ = np.unique(data.y.cpu().numpy())
+        self._is_fitted = True
 
         self.model = self.model.to(self.device)
         self.data = self.data.to(self.device)
-
         self._precomputed_probs = None
         self._precompute()
 
@@ -26,7 +26,7 @@ class WrapperClassifier(BaseEstimator, ClassifierMixin):
 
             self._precomputed_probs = F.softmax(logits, dim=1).cpu().numpy()
 
-    def fit(self, X, y=None):
+    def fit(self, X=None, Y=None):
         # No fitting necessary as the classifier is pre-trained
         if self._precomputed_probs is None:
             self._precompute()

@@ -1,6 +1,8 @@
 import zipfile
 import pandas as pd
 import torch
+import numpy as np
+import json
 from pathlib import Path
 from torch_geometric.data import Data
 from sklearn.preprocessing import LabelEncoder
@@ -43,6 +45,17 @@ def load_dataset(zip_path: Path, extract_dir: Path, feature_filename, edges_file
         print(f"An error occurred: {e}")
         return None, None
 
+def save_data_obj (data_obj, dataset_name):
+    """
+    Saves a PyG Data object as a pytorch object.
+    """
+    save_path = Path(__file__).parent/"split_data"/ dataset_name
+    save_path.mkdir(parents=True, exist_ok=True)
+    file_path = save_path / f"{dataset_name}_data.pt"
+    torch.save(data_obj, file_path)
+    print(f"Saved {dataset_name}_data.pt to {file_path}")
+
+
 def create_dataobj (features_df, edges_df):
     """
     Creates a PyG Data object from features and edges DataFrames.
@@ -69,3 +82,44 @@ def get_graph_data(dataset_name: str):
     )
 
     return create_dataobj(feat_df, edges_df)
+
+def load_data_object(dataset_name: str, base_dir="split_data"):
+    """
+    Loads a saved PyG Data object for a dataset.
+    """
+    data_path = Path(__file__).parent / f"{base_dir}/{dataset_name}/{dataset_name}_data.pt"
+    data = torch.load(data_path, weights_only=False)
+    return data
+
+
+def load_model(dataset_name, model_type, split_name, model_config, device='cpu'):
+    """
+    Loads a saved model for a given datset, architecture should be consistent with model_config
+    """
+    if split_name is not None:
+        model_fname= f"{model_type}_{dataset_name}_{split_name}.pth"
+    else:
+        print(f"Model {model_type} not found.")
+
+    model_path = Path(__file__).parent / "saved_models" / model_fname
+
+    input_dim = model_config['input_dim']
+    hidden_dim = model_config['hidden_dim']
+    output_dim = model_config['output_dim']
+    dropout = model_config.get('dropout', 0.5)
+
+    if model_type == 'GCN':
+        from models.gcn import GCN
+        model = GCN(input_dim, hidden_dim, output_dim, dropout)
+    elif model_type == 'MLP':
+        from models.mlp import MLP
+        model = MLP(input_dim, hidden_dim, output_dim, dropout)
+    else:
+        raise ValueError(f"Model {model_type} not recognized.")
+
+    state_dict = torch.load(model_path, map_location=device)
+    model.load_state_dict(state_dict)
+    model= model.to(device)
+    model.eval()
+
+    return model

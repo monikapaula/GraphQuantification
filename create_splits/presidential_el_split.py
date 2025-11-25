@@ -4,7 +4,7 @@ import torch
 
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from torch_geometric.data import Data
-from data_loader import load_dataset, DATASET_CONFIGS
+from utils.data_loader import load_dataset, DATASET_CONFIGS, save_data_obj
 from create_splits.split_manager import save_split, load_split
 
 DATASET_NAME = 'presidential_election'
@@ -147,4 +147,5 @@ def get_dataset(split_name= None):
 
 if __name__ == '__main__':
     data, train_mask, val_mask, test_mask = get_dataset(split_name='split_0')
+    save_data_obj(data, 'presidential_election')
 

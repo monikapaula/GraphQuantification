@@ -4,7 +4,7 @@ import torch
 from sklearn.preprocessing import StandardScaler
 from pathlib import Path
 from torch_geometric.data import Data
-from data_loader import load_dataset
+from utils.data_loader import load_dataset,save_data_obj
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_ZIP_PATH = BASE_DIR/'data/twitch_gamers/twitch_gamers_de.zip'
@@ -82,7 +82,9 @@ def get_masks():
     X_tensor = torch.from_numpy(X_np).float()
     edge_index = torch.from_numpy(edge_index).long()
     Y_tensor = torch.from_numpy(Y).long()
+
     data = Data(x=X_tensor, edge_index=edge_index, y=Y_tensor)
+    save_data_obj(data, 'presidential_election', 'split_data')
 
     print(X_tensor.shape)
     train_np, val_np, test_np = create_split(X)
