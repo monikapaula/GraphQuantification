@@ -17,6 +17,7 @@ BASE_DIR = 'split_data'
 def quantify(MODEL_CONFIG, DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, DEVICE, BASE_DIR):
 
     data = load_data_object(DATASET_NAME, base_dir=BASE_DIR)
+    print(data)
     num_nodes = data.num_nodes
     print(f"Dataset '{DATASET_NAME}' loaded. Nodes: {data.num_nodes}, Features: {data.x.size(1)}")
     MODEL_CONFIG['input_dim'] = data.x.size(1)
