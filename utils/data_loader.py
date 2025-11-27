@@ -1,11 +1,9 @@
 import zipfile
 import pandas as pd
 import torch
-import numpy as np
 import json
 from pathlib import Path
 from torch_geometric.data import Data
-from sklearn.preprocessing import LabelEncoder
 
 DATA_ROOT = Path(__file__).parent.parent.resolve()
 print(DATA_ROOT)
@@ -54,7 +52,6 @@ def save_data_obj (data_obj, dataset_name):
     save_path.mkdir(parents=True, exist_ok=True)
     file_path = save_path / f"{dataset_name}_data.pt"
     torch.save(data_obj, file_path)
-    print(type(data_obj))
     print(f"Saved {dataset_name}_data.pt to {file_path}")
 
 
@@ -90,7 +87,6 @@ def load_data_object(dataset_name: str, base_dir="split_data"):
     Loads a saved PyG Data object for a dataset.
     """
     data_path = DATA_ROOT/ f"{base_dir}/{dataset_name}/{dataset_name}_data.pt"
-    print("filepath:", data_path)
     data = torch.load(data_path, weights_only=False)
     return data
 

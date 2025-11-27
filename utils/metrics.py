@@ -11,7 +11,8 @@ def classifier_mae(predictions, ground_truth):
     classes = np.unique(ground_truth)
     true_prev = prevalence(ground_truth, classes)
     pred_prev = prevalence(predictions, classes)
-    mae = mean_squared_error(true_prev, pred_prev)
+    abs_error = np.abs(true_prev - pred_prev)
+    mae = np.mean(abs_error)
 
     return mae, true_prev, pred_prev
 

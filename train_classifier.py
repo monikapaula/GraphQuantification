@@ -1,8 +1,7 @@
 import torch
 import torch.optim as optim
-import os
 
-from create_splits.presidential_el_split import compute_class_weights, get_dataset
+from create_splits.presidential_election.presidential_el_split import compute_class_weights, get_dataset
 from utils.metrics import classifier_mae, extensive_evaluate, class_balance
 from models.gcn import GCN
 from models.mlp import MLP
@@ -100,7 +99,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
 
 if __name__ == '__main__':
     DATASET = 'presidential_election'
-    SPLIT_NAME = 'split_2'
+    SPLIT_NAME = 'split_3'
     data, train_mask, val_mask, test_mask = get_dataset(split_name=SPLIT_NAME)
     y_train = data.y[train_mask]
     weights = compute_class_weights(y_train)

@@ -9,7 +9,7 @@ from quantification.wrapper import WrapperClassifier
 from train_classifier import MODEL_CONFIG
 
 DATASET_NAME = 'presidential_election'
-SPLIT_NAME = 'split_0'
+SPLIT_NAME = 'split_3'
 CLASSIFIER_MODEL = 'GCN'
 DEVICE = 'cpu'
 BASE_DIR = 'split_data'
@@ -17,14 +17,14 @@ BASE_DIR = 'split_data'
 def quantify(MODEL_CONFIG, DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, DEVICE, BASE_DIR):
 
     data = load_data_object(DATASET_NAME, base_dir=BASE_DIR)
-    print(data)
+    #print(data)
     num_nodes = data.num_nodes
-    print(f"Dataset '{DATASET_NAME}' loaded. Nodes: {data.num_nodes}, Features: {data.x.size(1)}")
+    #print(f"Dataset '{DATASET_NAME}' loaded. Nodes: {data.num_nodes}, Features: {data.x.size(1)}")
     MODEL_CONFIG['input_dim'] = data.x.size(1)
     MODEL_CONFIG['output_dim'] = len(np.unique(data.y.cpu().numpy()))
 
     model = load_model(DATASET_NAME, CLASSIFIER_MODEL, SPLIT_NAME, MODEL_CONFIG,DEVICE)
-    print(f"Model loaded for dataset='{DATASET_NAME}', split='{SPLIT_NAME}', model='{CLASSIFIER_MODEL}'.")
+    #print(f"Model loaded for dataset='{DATASET_NAME}', split='{SPLIT_NAME}', model='{CLASSIFIER_MODEL}'.")
 
     wrapper = WrapperClassifier(model, data, device=DEVICE)
     wrapper.fit()
