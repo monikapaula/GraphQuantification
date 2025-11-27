@@ -3,7 +3,7 @@ import torch.optim as optim
 import os
 
 from create_splits.presidential_el_split import compute_class_weights, get_dataset
-from utils.metrics import classifier_mae, extensive_evaluate
+from utils.metrics import classifier_mae, extensive_evaluate, class_balance
 from models.gcn import GCN
 from models.mlp import MLP
 from utils.focal_loss import FocalLoss
@@ -100,11 +100,15 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
 
 if __name__ == '__main__':
     DATASET = 'presidential_election'
-    SPLIT_NAME = 'split_0'
+    SPLIT_NAME = 'split_2'
     data, train_mask, val_mask, test_mask = get_dataset(split_name=SPLIT_NAME)
     y_train = data.y[train_mask]
     weights = compute_class_weights(y_train)
     run_name = f"{DATASET}_{SPLIT_NAME}"
+    y = data.y
+    class_balance(y, train_mask, "TRAIN")
+    class_balance(y, val_mask, "VAL")
+    class_balance(y, test_mask, "TEST")
     train(
         config=MODEL_CONFIG,
         x = data.x,

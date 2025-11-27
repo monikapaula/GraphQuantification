@@ -36,6 +36,7 @@ def load_split(dataset_name,split_name,num_nodes ):
     """
     target_dir = SPLIT_DATA_DIR/dataset_name/split_name
     masks = {}
+    print(f"[INFO] Loading split: Dataset='{dataset_name}', Split='{split_name}'")
     for part in ['train','val','test']:
         filepath = target_dir/f"{part}.json"
         if not filepath.exists():

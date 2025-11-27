@@ -5,10 +5,16 @@ import torch
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from torch_geometric.data import Data
 from utils.data_loader import load_dataset, DATASET_CONFIGS, save_data_obj
+from utils.mask_creation import _create_mask
 from create_splits.split_manager import save_split, load_split
 
 DATASET_NAME = 'presidential_election'
 CONFIG = DATASET_CONFIGS[DATASET_NAME]
+SPLIT_REGISTRY= {
+    'split_0': 'random',
+    'split_1': 'geographic',
+    'split_2': 'coast'
+}
 
 TRAIN_RATIO = 0.6
 VALIDATION_RATIO = 0.1
@@ -72,7 +78,7 @@ def normalize_features(features_df, train_mask):
 def create_random_split(num_nodes):
     """
     trying a random split where different counties are randomly assigned to train, val and test (should mimic real-world)
-    :return: train, validation and test mask
+    split_name: split_0
     """
 
     train_size = int(num_nodes * TRAIN_RATIO)
@@ -84,16 +90,108 @@ def create_random_split(num_nodes):
     val_nodes = shuffle_ind[train_size:train_size + val_size]
     test_nodes = shuffle_ind[train_size + val_size:]
 
-    #Create masks
-    train_mask = np.zeros(num_nodes, dtype=bool)
-    val_mask = np.zeros(num_nodes, dtype=bool)
-    test_mask = np.zeros(num_nodes, dtype=bool)
+    return _create_mask(num_nodes, train_nodes, val_nodes, test_nodes)
 
-    train_mask[train_nodes] = True
-    val_mask[val_nodes] = True
-    test_mask[test_nodes] = True
+def create_geographic_split(features_df):
+    """
+    Train and val set on non-Eastern states, test on Eastern states, to create natural shift
+    between democrats and Republicans
+    split_name: split_1
+    """
+    state_lables = features_df['state'].values
+    num_nodes = len(state_lables)
 
-    return train_mask, val_mask, test_mask
+    eastern_states = {
+        'connecticut', 'maine', 'massachusetts', 'newhampshire', 'rhodeisland',
+        'vermont', 'newjersey', 'newyork', 'pennsylvania',
+        'delaware', 'maryland', 'virginia', 'westvirginia', 'northcarolina',
+        'southcarolina', 'georgia', 'florida'
+    }
+
+    eastern_idx = np.array([i for i in range(num_nodes)
+                            if state_lables[i] in eastern_states])
+    non_eastern_idx = np.array([i for i in range(num_nodes)
+                                if state_lables[i] not in eastern_states])
+
+    val_size = int(len(non_eastern_idx) * VALIDATION_RATIO)
+    val_nodes = non_eastern_idx[:val_size]
+    train_nodes = non_eastern_idx[val_size:]
+    test_nodes = eastern_idx
+
+    return _create_mask(num_nodes, train_nodes, val_nodes, test_nodes)
+
+def create_coast_shift(features_df, y_np ):
+    """
+    creates a shift between interior states (republican) and coastal states (democratic)
+    split_name: split_2
+    """
+    train_rep = 0.9
+    test_dem = 0.8
+
+    val_states = {
+        'arizona', 'georgia', 'nevada', 'northcarolina'
+    }
+
+    test_states = {
+        'california', 'newyork', 'illinois', 'newjersey', 'virginia', 'washington', 'massachusetts',
+        'maryland', 'colorado', 'minnesota', 'oregon', 'connecticut', 'hawaii', 'delaware',
+        'rhodeisland', 'vermont', 'maine', 'newmexico', 'newhampshire', 'districtofcolumbia'
+    }
+
+    all_states = set(features_df['state'].unique())
+    train_states = all_states.difference(test_states.union(val_states))
+
+    num_nodes = len(features_df)
+    rng = np.random.default_rng(seed=42)
+    states = features_df['state'].values
+
+    train_nodes_pool = np.array([i for i, s in enumerate(states) if s in train_states])
+    test_nodes_pool = np.array([i for i, s in enumerate(states) if s in test_states])
+    val_nodes_pool = np.array([i for i, s in enumerate(states) if s in val_states])
+
+    rng.shuffle(train_nodes_pool); rng.shuffle(test_nodes_pool); rng.shuffle(val_nodes_pool)
+    train_list = []; test_list = []; val_list = [val_nodes_pool]
+
+    # MAXIMIZE REPUBLICANS in TRAIN
+    y_tr = y_np[train_nodes_pool]
+    tr_dem = train_nodes_pool[y_tr == 0] #Minorty = Democrtas
+    tr_rep = train_nodes_pool[y_tr == 1] #Majority = Republicans
+    rng.shuffle(tr_dem); rng.shuffle(tr_rep)
+
+    tr_rep_keep = tr_rep
+    ratio_tr = (1.0 - train_rep) / train_rep
+    num_dem_nodes = int(len(tr_rep_keep)* ratio_tr)
+
+    tr_dem_keep = tr_dem[:num_dem_nodes]
+    tr_dem_dis = tr_dem[num_dem_nodes:]
+
+    val_list.append(tr_dem_dis)
+    train_list.append(np.concatenate([tr_rep_keep, tr_dem_keep]))
+
+    # MAXIMIZE DEMOCRATS in TEST
+    y_te = y_np[test_nodes_pool]
+    te_dem = test_nodes_pool[y_te == 0] #Majority
+    te_rep = test_nodes_pool[y_te == 1] # Minority
+    rng.shuffle(te_dem); rng.shuffle(te_rep)
+
+    te_dem_keep = te_dem
+    ratio_te = (1.0 - test_dem) / test_dem
+    num_rep_nodes = int(len(te_dem_keep) * ratio_te)
+    num_rep_nodes = min(num_rep_nodes, len(te_rep))
+
+    te_rep_keep = te_rep[:num_rep_nodes]
+    te_rep_dis = te_rep[num_rep_nodes:]
+
+    test_list.append(np.concatenate([te_dem_keep, te_rep_keep]))
+    train_list.append(np.concatenate([te_dem_keep, te_rep_keep]))
+    train_list.append(te_rep_dis)
+
+    train_nodes = np.concatenate(train_list)
+    test_nodes = np.concatenate(test_list)
+    val_nodes = np.concatenate(val_list)
+
+    return _create_mask(num_nodes, train_nodes, val_nodes, test_nodes)
+
 
 def compute_class_weights(y):
     """
@@ -108,23 +206,33 @@ def compute_class_weights(y):
 
     return weights
 
-def manage_splits(split_name, num_nodes):
-    if split_name:
-        try:
-            return load_split(DATASET_NAME,split_name, num_nodes)
-        except FileNotFoundError:
-            print('Dataset not found. Creating splits...')
-            train_mask, val_mask, test_mask = create_random_split(num_nodes)
-            save_split(DATASET_NAME, split_name, train_mask, val_mask, test_mask)
-    return create_random_split(num_nodes)
+def manage_splits(split_name, num_nodes, create_sp):
+    train_mask, val_mask, test_mask = create_sp()
+    save_split(DATASET_NAME, split_name, train_mask, val_mask, test_mask)
+    return train_mask, val_mask, test_mask
 
-
-def get_dataset(split_name= None):
+def get_dataset(split_name= None, split_type = None):
 
     features_df, edges_df = load_data()
     num_nodes = len(features_df)
+    Y_np = encode_labels(features_df)
 
-    train_mask, val_mask, test_mask = manage_splits(split_name, num_nodes)
+    if split_type is None:
+        if split_name in SPLIT_REGISTRY:
+            split_type = SPLIT_REGISTRY[split_name]
+        else:
+            print(f"Split name {split_name} not in registry")
+
+    if split_type == "geographic":
+        create_sp = lambda: create_geographic_split(features_df)
+    elif split_type == "random":
+        create_sp = lambda: create_random_split(num_nodes)
+    elif split_type == "coast":
+        create_sp = lambda: create_coast_shift(features_df,Y_np)
+    else:
+        raise ValueError("Unknown split type")
+
+    train_mask, val_mask, test_mask = manage_splits(split_name, num_nodes, create_sp)
 
     Y_np = encode_labels(features_df)
     features_df = preprocess_features(features_df)
@@ -146,6 +254,9 @@ def get_dataset(split_name= None):
 
 
 if __name__ == '__main__':
-    data, train_mask, val_mask, test_mask = get_dataset(split_name='split_0')
+    data, train_mask, val_mask, test_mask = get_dataset(split_name='split_2')
+    print("size training:", train_mask.sum())
+    print("size val:", val_mask.sum())
+    print("size test:", test_mask.sum())
     save_data_obj(data, 'presidential_election')
 
