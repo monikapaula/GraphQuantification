@@ -1,5 +1,9 @@
 # Deezer_europe splits 
 
+class balance between genders relatively equally distributed 
+0: female = 15743
+1: male = 12538
+
 ## split_0: 
 The model is trained primarily on users who listen to female-dominated artists (Class 1).
 The model is evaluated primarily on users who listen to male-dominated artists (Class 0).
