@@ -6,13 +6,15 @@ import numpy as np
 from utils.data_loader import load_deezer_europe, DATASET_CONFIGS, save_data_obj
 from create_splits.split_manager import save_split
 from create_splits.deezer_europe.gender_split import create_gender_split
+from create_splits.deezer_europe.popularity_split import create_popularity_split
 from utils.metrics import class_balance
 
 DATASET_NAME = 'deezer_europe'
 CONFIG = DATASET_CONFIGS[DATASET_NAME]
 SPLIT_REGISTRY = {
     'split_0': 'male_dominated',
-    'split_1': 'female_dominated'
+    'split_1': 'female_dominated',
+    'split_2': 'popular_artists'
 }
 
 def load_data():
@@ -67,7 +69,8 @@ def get_dataset(split_name= None, split_type = None):
         create_sp = lambda : create_gender_split(features_df, target_df)
     elif split_type == "female_dominated":
         create_sp = lambda : create_gender_split(features_df, target_df)
-
+    elif split_type == "popular_artists":
+        create_sp = lambda : create_popularity_split(features_df, target_df)
     else:
         raise ValueError("Unknown split type")
 
@@ -91,7 +94,7 @@ def get_dataset(split_name= None, split_type = None):
     return data, train_mask, val_mask, test_mask
 
 if __name__ == "__main__":
-    data, train_mask, val_mask, test_mask = get_dataset(split_name="split_0")
+    data, train_mask, val_mask, test_mask = get_dataset(split_name="split_2")
     save_data_obj(data, DATASET_NAME)
     y = data.y
     class_balance(y, train_mask, "TRAIN")
