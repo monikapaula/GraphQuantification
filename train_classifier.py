@@ -99,7 +99,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
 
 if __name__ == '__main__':
     DATASET = 'deezer_europe'
-    SPLIT_NAME = 'split_1'
+    SPLIT_NAME = 'split_0'
     print(f"Loading dataset '{DATASET}' with split '{SPLIT_NAME}'")
     data, train_mask, val_mask, test_mask = get_dataset(split_name=SPLIT_NAME)
     y_train = data.y[train_mask]

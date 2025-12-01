@@ -65,7 +65,7 @@ def get_dataset(split_name= None, split_type = None):
 
     if split_type == "male_dominated":
         create_sp = lambda : create_gender_split(features_df, target_df)
-    if split_type == "female_dominated":
+    elif split_type == "female_dominated":
         create_sp = lambda : create_gender_split(features_df, target_df)
 
     else:
@@ -91,7 +91,7 @@ def get_dataset(split_name= None, split_type = None):
     return data, train_mask, val_mask, test_mask
 
 if __name__ == "__main__":
-    data, train_mask, val_mask, test_mask = get_dataset(split_name="split_1")
+    data, train_mask, val_mask, test_mask = get_dataset(split_name="split_0")
     save_data_obj(data, DATASET_NAME)
     y = data.y
     class_balance(y, train_mask, "TRAIN")
