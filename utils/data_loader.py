@@ -2,6 +2,8 @@ import zipfile
 import pandas as pd
 import torch
 import json
+import numpy as np
+
 from pathlib import Path
 from torch_geometric.data import Data
 
@@ -20,7 +22,15 @@ DATASET_CONFIGS = {
         'extract_dir': DATA_ROOT/'data' / 'presidential_election',
         'feature_filename': 'presidential_election_nodes.csv',
         'edges_filename': 'presidential_election_edges.csv'
+    },
+    'deezer_europe': {
+        'zip_path': DATA_ROOT / 'data' / 'deezer_europe' / 'deezer_europe.zip',
+        'extract_dir': DATA_ROOT / 'data',
+        'feature_filename': 'deezer_europe/deezer_europe_features.json',
+        'edges_filename': 'deezer_europe/deezer_europe_edges.csv',
+        'target_filename': 'deezer_europe/deezer_europe_target.csv'
     }
+
 }
 
 def load_dataset(zip_path: Path, extract_dir: Path, feature_filename, edges_filename):
@@ -53,34 +63,6 @@ def save_data_obj (data_obj, dataset_name):
     file_path = save_path / f"{dataset_name}_data.pt"
     torch.save(data_obj, file_path)
     print(f"Saved {dataset_name}_data.pt to {file_path}")
-
-
-def create_dataobj (features_df, edges_df):
-    """
-    Creates a PyG Data object from features and edges DataFrames.
-    """
-    x = torch.tensor(features_df, dtype=torch.float)
-    edge_index = torch.tensor(edges_df.values.T, dtype=torch.long)
-    y = torch.tensor(features_df.values, dtype=torch.long)
-
-    return Data(x=x, edge_index=edge_index, y=y)
-
-def get_graph_data(dataset_name: str):
-    """
-    Main function to get graph data for a specified dataset.
-    """
-    if dataset_name not in DATASET_CONFIGS:
-        raise ValueError(f"Dataset {dataset_name} not found.")
-
-    cfg = DATASET_CONFIGS[dataset_name]
-    feat_df,edges_df = load_dataset(
-        zip_path=cfg['zip_path'],
-        extract_dir=cfg['extract_dir'],
-        feature_filename=cfg['feature_filename'],
-        edges_filename=cfg['edges_filename']
-    )
-
-    return create_dataobj(feat_df, edges_df)
 
 def load_data_object(dataset_name: str, base_dir="split_data"):
     """
@@ -122,3 +104,25 @@ def load_model(dataset_name, model_type, split_name, model_config, device='cpu')
     model.eval()
 
     return model
+
+def load_deezer_europe(cfg):
+    zip_path = cfg['zip_path']
+    extract_dir = cfg['extract_dir']
+
+    extract_dir.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(zip_path) as zip_f:
+        zip_f.extractall(extract_dir)
+
+    edges_path = extract_dir / cfg['edges_filename']
+    features_path = extract_dir / cfg['feature_filename']
+    target_path = extract_dir / cfg['target_filename']
+
+    edges_df = pd.read_csv(edges_path)
+
+    target_df = pd.read_csv(target_path)
+
+    with open(features_path, 'r') as f:
+        features_data = json.load(f)
+
+    return features_data, edges_df, target_df
+

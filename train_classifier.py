@@ -2,6 +2,7 @@ import torch
 import torch.optim as optim
 
 from create_splits.presidential_election.presidential_el_split import compute_class_weights, get_dataset
+from create_splits.deezer_europe.deezer_europe_split import get_dataset
 from utils.metrics import classifier_mae, extensive_evaluate, class_balance
 from models.gcn import GCN
 from models.mlp import MLP
@@ -43,7 +44,7 @@ def evaluate(model, x, edge_index, mask, y):
     return acc
 
 
-def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, class_weights=None, dataset_name='presidential_election'):
+def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, class_weights=None, dataset_name=None):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     config['input_dim'] = x.size(1)
@@ -58,8 +59,6 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
 
     #gamma parameter for focusing on hard examples
     criterion = FocalLoss(alpha=class_weights, gamma=4.0)
-
-    print(f"---Starting training for {config['epochs']} epochs---")
 
     for epoch in range(1, config['epochs']+1):
         #Training step
@@ -78,7 +77,8 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
         train_acc = evaluate(model, x, edge_index, train_mask, y)
         val_acc = evaluate(model, x, edge_index, val_mask, y)
 
-        print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
+        if epoch % 100 == 0 or epoch == 1:
+            print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
 
     # evaluation on test set using F1 and MAE
     test_acc = extensive_evaluate(model, x, edge_index, test_mask,y)
@@ -98,8 +98,9 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
     return model
 
 if __name__ == '__main__':
-    DATASET = 'presidential_election'
-    SPLIT_NAME = 'split_3'
+    DATASET = 'deezer_europe'
+    SPLIT_NAME = 'split_1'
+    print(f"Loading dataset '{DATASET}' with split '{SPLIT_NAME}'")
     data, train_mask, val_mask, test_mask = get_dataset(split_name=SPLIT_NAME)
     y_train = data.y[train_mask]
     weights = compute_class_weights(y_train)

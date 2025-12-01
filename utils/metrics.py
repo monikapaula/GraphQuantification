@@ -40,15 +40,23 @@ def class_balance(y:torch.Tensor, mask,name):
 
     if y.dim() != 1:
         y=y.view(-1)
-    y_region = y[mask]
-    if y_region.numel() == 0:
-        print(f"{name} region has no samples.")
-        return
-    total = y_region.numel()
-    dem = (y_region == 0).sum().item()
-    rep = (y_region == 1).sum().item()
+    y_subset = y[mask]
+    total = y_subset.numel()
 
-    print(f"{name} region:")
+    if y_subset.numel() == 0:
+        print(f"{name} has no samples.")
+        return
+
+    print(f"---Class balance for {name} set---")
     print(f"Total samples: {total}")
-    print(f"Democrat samples: {dem} ({dem/total:.2%})")
-    print(f"Republic samples: {rep} ({rep/total:.2%})")
+
+    unique_classes, counts = torch.unique(y_subset, return_counts=True)
+
+    for cls, count in zip(unique_classes, counts):
+        cls_id = cls.item()
+        count_val = count.item()
+        percentage = count_val / total
+
+        print(f"Class {cls_id}: Count = {count_val}, Percentage = {percentage:.4%}")
+
+    print("-" *30)

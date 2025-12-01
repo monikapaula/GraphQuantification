@@ -8,8 +8,8 @@ from create_splits.split_manager import load_split
 from quantification.wrapper import WrapperClassifier
 from train_classifier import MODEL_CONFIG
 
-DATASET_NAME = 'presidential_election'
-SPLIT_NAME = 'split_3'
+DATASET_NAME = 'deezer_europe'
+SPLIT_NAME = 'split_0'
 CLASSIFIER_MODEL = 'GCN'
 DEVICE = 'cpu'
 BASE_DIR = 'split_data'
@@ -17,7 +17,7 @@ BASE_DIR = 'split_data'
 def quantify(MODEL_CONFIG, DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, DEVICE, BASE_DIR):
 
     data = load_data_object(DATASET_NAME, base_dir=BASE_DIR)
-    #print(data)
+    print("Shape",data.x.shape)
     num_nodes = data.num_nodes
     #print(f"Dataset '{DATASET_NAME}' loaded. Nodes: {data.num_nodes}, Features: {data.x.size(1)}")
     MODEL_CONFIG['input_dim'] = data.x.size(1)
