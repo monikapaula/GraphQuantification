@@ -14,9 +14,9 @@ MODEL_CONFIG = {
     'input_dim': None,
     'hidden_dim': 64,
     'output_dim': 2,
-    'dropout': 0.5,
+    'dropout': 0.7,
     'lr': 1e-3,
-    'epochs': 300,
+    'epochs': 1000,
     'save_model': True
 }
 
@@ -99,7 +99,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
 
 if __name__ == '__main__':
     DATASET = 'deezer_europe'
-    SPLIT_NAME = 'split_0'
+    SPLIT_NAME = 'split_3'
     print(f"Loading dataset '{DATASET}' with split '{SPLIT_NAME}'")
     data, train_mask, val_mask, test_mask = get_dataset(split_name=SPLIT_NAME)
     y_train = data.y[train_mask]

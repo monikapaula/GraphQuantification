@@ -21,6 +21,10 @@ def create_metro_split(features_df):
     val_indices = np.where((population < 50000) & (population >= 10000))[0]  # µSAs
     test_nodes = np.where(population < 10000)[0]  # Rural areas
 
+    print(f"Number of total population: {len(population)}")
+    print(f"Number of MSA nodes: {len(train_nodes)}")
+
+
     rng = np.random.default_rng(seed=42)
     rng.shuffle(train_nodes)
     rng.shuffle(val_indices)

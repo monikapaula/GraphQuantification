@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 
 from utils.mask_creation import _create_mask
 

@@ -14,7 +14,7 @@ def create_random_split(num_nodes, TRAIN_RATIO, VALIDATION_RATIO):
     shuffle_ind = np.random.permutation(num_nodes)
 
     train_nodes = shuffle_ind[:train_size]
-    val_nodes = shuffle_ind[train_size:train_size + val_size]
+    val_nodes = shuffle_ind[train_size : train_size + val_size]
     test_nodes = shuffle_ind[train_size + val_size:]
 
     return _create_mask(num_nodes, train_nodes, val_nodes, test_nodes)
