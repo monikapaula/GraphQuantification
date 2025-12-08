@@ -33,6 +33,26 @@ def create_metro_split(features_df):
     val_target = int(num_nodes * 0.1)
     val_nodes = val_indices[:val_target]
 
+    unused_val_nodes = val_indices[val_target:]
+    num_left_out = len(unused_val_nodes)
+    percent_left_out = (num_left_out / num_nodes) * 100
+
+    # 2. Verify if any nodes were lost in the initial population split (e.g. NaNs)
+    # The sum of all groups should equal num_nodes
+    total_captured = len(train_nodes) + len(val_indices) + len(test_nodes)
+    unaccounted_nodes = num_nodes - total_captured
+
+    print("-" * 30)
+    print(f"Total Nodes: {num_nodes}")
+    print(f"Validation Target (10%): {val_target}")
+    print(f"Available µSAs: {len(val_indices)}")
+    print(f"Used µSAs: {len(val_nodes)}")
+    print(f"Counties Left Out (Unused µSAs): {num_left_out} ({percent_left_out:.2f}%)")
+
+    if unaccounted_nodes > 0:
+        print(f"WARNING: {unaccounted_nodes} nodes were not categorized (possibly NaN population data).")
+    print("-" * 30)
+
     return _create_mask(num_nodes, train_nodes, val_nodes, test_nodes)
 
 

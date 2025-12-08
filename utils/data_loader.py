@@ -12,13 +12,9 @@ print(DATA_ROOT)
 
 DATASET_CONFIGS = {
     'twitch_gamers': {
-        'zip_path': DATA_ROOT / "data"/ 'twitch_gamers' / 'twitch_gamers_de.zip',
-        'extract_dir': DATA_ROOT/ "data" / 'twitch_gamers',
-        'feature_filename': 'twitch_gamers_features_de.csv',
-        'edges_filename': 'twitch_gamers_edges_de.csv'
+        'extract_dir': DATA_ROOT/ "data" / 'twitch_gamers'
     },
     'presidential_election': {
-        'zip_path': DATA_ROOT /'data'/ 'presidential_election' / 'presidential_election.zip',
         'extract_dir': DATA_ROOT/'data' / 'presidential_election',
         'feature_filename': 'presidential_election_nodes.csv',
         'edges_filename': 'presidential_election_edges.csv'
@@ -33,26 +29,18 @@ DATASET_CONFIGS = {
 
 }
 
-def load_dataset(zip_path: Path, extract_dir: Path, feature_filename, edges_filename):
+def load_dataset(extract_dir: Path, feature_filename, edges_filename):
     """
     Loads dataset from a zip file containing feature and edge CSV files.
     """
-    try:
-        extract_dir.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(zip_path) as zip_f:
-            zip_f.extractall(extract_dir)
 
-        feature_file = extract_dir / feature_filename
-        edges_file = extract_dir / edges_filename
+    feature_file = extract_dir / feature_filename
+    edges_file = extract_dir / edges_filename
 
-        features_df = pd.read_csv(feature_file)
-        edges_df = pd.read_csv(edges_file)
+    features_df = pd.read_csv(feature_file)
+    edges_df = pd.read_csv(edges_file)
 
-        return features_df, edges_df
-
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return None, None
+    return features_df, edges_df
 
 def save_data_obj (data_obj, dataset_name):
     """
@@ -125,4 +113,28 @@ def load_deezer_europe(cfg):
         features_data = json.load(f)
 
     return features_data, edges_df, target_df
+
+def load_twitch_gamers(cfg):
+    extract_dir = cfg['extract_dir']
+    SOURCE_LANG = 'DE'
+    TARGET_LANG = ['ENGB', 'ES', 'FR', 'PTBR', 'RU']
+    ALL_LANG = [SOURCE_LANG] + TARGET_LANG
+    all_datasets = {}
+
+    for lang in ALL_LANG:
+        source_path = extract_dir / lang
+
+        with open(source_path / f"musae_{SOURCE_LANG}_features.json", 'r') as f:
+            features_df = json.load(f)
+
+        target_df = pd.read_csv(source_path / f"musae_{SOURCE_LANG}_target.csv")
+        edges_df = pd.read_csv(source_path / f"musae_{SOURCE_LANG}_edges.csv")
+
+        all_datasets[lang] = {
+            'features_df': features_df,
+            'edges_df': edges_df,
+            'target_df': target_df
+        }
+
+        return all_datasets
 

@@ -47,7 +47,6 @@ NORM_COLS = [
 
 def load_data():
     features_df, edges_df = load_dataset(
-        zip_path= CONFIG['zip_path'],
         extract_dir= CONFIG['extract_dir'],
         feature_filename= CONFIG['feature_filename'],
         edges_filename=CONFIG['edges_filename'],

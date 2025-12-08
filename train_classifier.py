@@ -1,8 +1,9 @@
 import torch
 import torch.optim as optim
+import argparse
 
-from create_splits.presidential_election.presidential_el_split import compute_class_weights, get_dataset
-from create_splits.deezer_europe.deezer_europe_split import get_dataset
+from create_splits.presidential_election.presidential_el_split import compute_class_weights, get_dataset as get_election_dataset
+from create_splits.deezer_europe.deezer_europe_split import get_dataset as get_deezer_dataset
 from utils.metrics import classifier_mae, extensive_evaluate, class_balance
 from models.gcn import GCN
 from models.mlp import MLP
@@ -98,17 +99,34 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
     return model
 
 if __name__ == '__main__':
-    DATASET = 'deezer_europe'
-    SPLIT_NAME = 'split_3'
+    parser = argparse.ArgumentParser(description='Train classifier model')
+    parser.add_argument('--dataset', type=str, choices=['deezer_europe', 'presidential_election', 'twitch_gamers'],
+                        help='Name of datasets')
+    parser.add_argument('--split', type=str)
+    parser.add_argument('--model', type=str, choices=['GCN', 'MLP'], default='GCN')
+    parser.add_argument('--epochs', type=int, default=300)
+    args = parser.parse_args()
+
+    DATASET = args.dataset
+    SPLIT_NAME = args.split
+    MODEL_CONFIG['epochs'] = args.epochs
     print(f"Loading dataset '{DATASET}' with split '{SPLIT_NAME}'")
-    data, train_mask, val_mask, test_mask = get_dataset(split_name=SPLIT_NAME)
+    if DATASET == 'presidential_election':
+        data, train_mask, val_mask, test_mask = get_election_dataset(split_name=SPLIT_NAME)
+    elif DATASET == 'deezer_europe':
+        data, train_mask, val_mask, test_mask = get_deezer_dataset(split_name=SPLIT_NAME)
+    else:
+        raise ValueError(f"Unknown dataset '{DATASET}'")
+
     y_train = data.y[train_mask]
     weights = compute_class_weights(y_train)
     run_name = f"{DATASET}_{SPLIT_NAME}"
     y = data.y
+
     class_balance(y, train_mask, "TRAIN")
     class_balance(y, val_mask, "VAL")
     class_balance(y, test_mask, "TEST")
+
     train(
         config=MODEL_CONFIG,
         x = data.x,
@@ -120,8 +138,3 @@ if __name__ == '__main__':
         class_weights = weights,
         dataset_name = run_name
     )
-
-
-
-
-

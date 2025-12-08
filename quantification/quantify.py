@@ -1,7 +1,7 @@
 import numpy as np
 import quapy as qp
 from quapy.data import LabelledCollection
-from quapy.method.aggregative import ACC, PCC, PACC
+from quapy.method.aggregative import ACC, PCC, PACC, KDEyCS
 
 from utils.data_loader import load_data_object, load_model
 from create_splits.split_manager import load_split
@@ -9,7 +9,7 @@ from quantification.wrapper import WrapperClassifier
 from train_classifier import MODEL_CONFIG
 
 DATASET_NAME = 'deezer_europe'
-SPLIT_NAME = 'split_0'
+SPLIT_NAME = 'split_3'
 CLASSIFIER_MODEL = 'GCN'
 DEVICE = 'cpu'
 BASE_DIR = 'split_data'
@@ -45,7 +45,8 @@ def quantify(MODEL_CONFIG, DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, DEVICE, B
     quantifiers = {
         'ACC': ACC(wrapper, fit_classifier=False),
         'PCC': PCC(wrapper, fit_classifier=False),
-        'PACC': PACC(wrapper, fit_classifier=False)
+        'PACC': PACC(wrapper, fit_classifier=False),
+        'KDEy': KDEyCS(wrapper, fit_classifier=False)
     }
 
     print(f"\nTrue prevalence: {np.round(test_set.prevalence(), 4)}")
