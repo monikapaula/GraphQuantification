@@ -29,7 +29,12 @@ def manage_splits(split_name, num_nodes, create_sp):
     save_split(DATASET_NAME, split_name, train_mask, val_mask, test_mask)
     return train_mask, val_mask, test_mask
 
-def user_embeddings(features_df, embed_dim=64):
+def user_embeddings(features_df, embed_dim=32):
+    """
+    creates a random vector for every artist and
+    returns : the average of the artist embeddings for a user
+
+    """
 
     user_ids = [int(u) for u in features_df.keys()]
     num_users = max(user_ids) + 1

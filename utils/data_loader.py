@@ -124,11 +124,11 @@ def load_twitch_gamers(cfg):
     for lang in ALL_LANG:
         source_path = extract_dir / lang
 
-        with open(source_path / f"musae_{SOURCE_LANG}_features.json", 'r') as f:
+        with open(source_path / f"musae_{lang}_features.json", 'r') as f:
             features_df = json.load(f)
 
-        target_df = pd.read_csv(source_path / f"musae_{SOURCE_LANG}_target.csv")
-        edges_df = pd.read_csv(source_path / f"musae_{SOURCE_LANG}_edges.csv")
+        target_df = pd.read_csv(source_path / f"musae_{lang}_target.csv")
+        edges_df = pd.read_csv(source_path / f"musae_{lang}_edges.csv")
 
         all_datasets[lang] = {
             'features_df': features_df,
@@ -136,5 +136,5 @@ def load_twitch_gamers(cfg):
             'target_df': target_df
         }
 
-        return all_datasets
+    return all_datasets
 

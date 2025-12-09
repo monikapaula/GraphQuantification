@@ -1,11 +1,11 @@
 import copy
-
 import torch
 import torch.optim as optim
 import argparse
 
 from create_splits.presidential_election.presidential_el_split import compute_class_weights, get_dataset as get_election_dataset
 from create_splits.deezer_europe.deezer_europe_split import get_dataset as get_deezer_dataset
+from create_splits.twitch_gamers.twitch_gamers_split import get_dataset as get_twitch_gamers_dataset
 from utils.metrics import classifier_mae, extensive_evaluate, class_balance
 from models.gcn import GCN
 from models.mlp import MLP
@@ -20,7 +20,6 @@ MODEL_CONFIG = {
     'output_dim': 2,
     'dropout': 0.3,
     'lr': 1e-3,
-    'epochs': 1000,
     'save_model': True
 }
 
@@ -63,16 +62,16 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
 
     #gamma parameter for focusing on hard examples
     criterion = FocalLoss(alpha=class_weights, gamma=2.0)
-    early_stopper = EarlyStopper(patience=20, min_delta=0.001 )
+    early_stopper = EarlyStopper(patience=200, min_delta=0.001 )
+    best_model_state = None
 
-    for epoch in range(1, config['epochs']+1):
+    for epoch in range(args.epochs):
         #Training step
         model.train()
         optimizer.zero_grad()
 
         #output the log-probabilities
         log_probabilities = model(x, edge_index)
-        #loss = F.nll_loss(log_probabilities[train_mask], y[train_mask], weight=class_weights)
         loss = criterion(log_probabilities[train_mask], y[train_mask])
 
         loss.backward()
@@ -135,6 +134,8 @@ if __name__ == '__main__':
         data, train_mask, val_mask, test_mask = get_election_dataset(split_name=SPLIT_NAME)
     elif DATASET == 'deezer_europe':
         data, train_mask, val_mask, test_mask = get_deezer_dataset(split_name=SPLIT_NAME)
+    elif DATASET == 'twitch_gamers':
+        data,train_mask,val_mask,test_mask = get_twitch_gamers_dataset(SPLIT_NAME)
     else:
         raise ValueError(f"Unknown dataset '{DATASET}'")
 
