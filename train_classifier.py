@@ -1,3 +1,5 @@
+import copy
+
 import torch
 import torch.optim as optim
 import argparse
@@ -9,13 +11,14 @@ from models.gcn import GCN
 from models.mlp import MLP
 from utils.focal_loss import FocalLoss
 from utils.save_model import save_model
+from utils.early_stopping import EarlyStopper
 
 MODEL_CONFIG = {
     'name': 'GCN',
     'input_dim': None,
     'hidden_dim': 64,
     'output_dim': 2,
-    'dropout': 0.7,
+    'dropout': 0.3,
     'lr': 1e-3,
     'epochs': 1000,
     'save_model': True
@@ -26,7 +29,7 @@ def load_model(config:dict):
     in_dim = config['input_dim']
     hidden_dim = config.get('hidden_dim', 32)
     output_dim = config.get('output_dim',2)
-    dropout = config.get('dropout', 0.5)
+    dropout = config.get('dropout', 0.3)
 
     if name == 'GCN':
         return GCN(in_dim, hidden_dim, output_dim,dropout)
@@ -59,7 +62,8 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
         class_weights = class_weights.to(device)
 
     #gamma parameter for focusing on hard examples
-    criterion = FocalLoss(alpha=class_weights, gamma=4.0)
+    criterion = FocalLoss(alpha=class_weights, gamma=2.0)
+    early_stopper = EarlyStopper(patience=20, min_delta=0.001 )
 
     for epoch in range(1, config['epochs']+1):
         #Training step
@@ -74,12 +78,25 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
         loss.backward()
         optimizer.step()
 
-        #Evaluation step
-        train_acc = evaluate(model, x, edge_index, train_mask, y)
-        val_acc = evaluate(model, x, edge_index, val_mask, y)
+        # Evaluation
+        model.eval()
+        with torch.no_grad():
+            out_val = model(x, edge_index)
+            val_loss = criterion(out_val[val_mask], y[val_mask]).item()
+            val_acc = evaluate(model, x, edge_index, val_mask, y)
+            train_acc = evaluate(model, x, edge_index, train_mask, y)
 
         if epoch % 100 == 0 or epoch == 1:
             print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
+
+        #Early Stopping
+        if val_loss < early_stopper.min_validation_loss:
+            best_model_state = copy.deepcopy(model.state_dict())
+        if early_stopper.early_stop(val_loss):
+            break
+
+    if best_model_state is not None:
+        model.load_state_dict(best_model_state)
 
     # evaluation on test set using F1 and MAE
     test_acc = extensive_evaluate(model, x, edge_index, test_mask,y)
@@ -96,6 +113,8 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
 
     if config.get('save_model', False):
         save_model(model, config, dataset_name=run_name)
+
+
     return model
 
 if __name__ == '__main__':
@@ -109,6 +128,7 @@ if __name__ == '__main__':
 
     DATASET = args.dataset
     SPLIT_NAME = args.split
+    MODEL_CONFIG['name'] = args.model
     MODEL_CONFIG['epochs'] = args.epochs
     print(f"Loading dataset '{DATASET}' with split '{SPLIT_NAME}'")
     if DATASET == 'presidential_election':

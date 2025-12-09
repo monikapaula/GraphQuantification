@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 from sklearn.metrics import mean_squared_error, confusion_matrix, classification_report, f1_score
-from sympy import print_tree
 
 
 def prevalence(y, classes):
@@ -31,7 +30,7 @@ def extensive_evaluate(model, x, edge_index, mask, y):
         print(f" [FN : {cm[1][0]}, TP : {cm[1][1]}]]")
 
         print("\n--- Classification Report ---")
-        print(classification_report(y_true, y_pred, target_names=['Democrat', 'Republican'], zero_division=0))
+        print(classification_report(y_true, y_pred, target_names=['Class 0', 'Class 1'], zero_division=0))
 
     marco_f1= f1_score(y_true, y_pred, average='macro', zero_division=0)
     return marco_f1
