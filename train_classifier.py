@@ -16,7 +16,7 @@ from utils.early_stopping import EarlyStopper
 MODEL_CONFIG = {
     'name': 'GCN',
     'input_dim': None,
-    'hidden_dim': 64,
+    'hidden_dim': 128,
     'output_dim': 2,
     'dropout': 0.3,
     'lr': 1e-3,
@@ -26,9 +26,9 @@ MODEL_CONFIG = {
 def load_model(config:dict):
     name = config.get('name').upper()
     in_dim = config['input_dim']
-    hidden_dim = config.get('hidden_dim', 32)
-    output_dim = config.get('output_dim',2)
-    dropout = config.get('dropout', 0.3)
+    hidden_dim = config['hidden_dim']
+    output_dim = config['output_dim']
+    dropout = config['dropout']
 
     if name == 'GCN':
         return GCN(in_dim, hidden_dim, output_dim,dropout)
@@ -62,7 +62,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
 
     #gamma parameter for focusing on hard examples
     criterion = FocalLoss(alpha=class_weights, gamma=2.0)
-    early_stopper = EarlyStopper(patience=200, min_delta=0.001 )
+    early_stopper = EarlyStopper(patience=20, min_delta=0.001 )
     best_model_state = None
 
     for epoch in range(args.epochs):

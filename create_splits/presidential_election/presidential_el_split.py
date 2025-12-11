@@ -51,6 +51,8 @@ def load_data():
         feature_filename= CONFIG['feature_filename'],
         edges_filename=CONFIG['edges_filename'],
     )
+    print(features_df.columns)
+    #print(len(features_df.columns))
     return features_df, edges_df
 
 def encode_labels(features_df):
@@ -59,20 +61,20 @@ def encode_labels(features_df):
     encoded_labels = encoder.fit_transform(features_df['Label (County)'].values)
     return encoded_labels
 
-def preprocess_features(df):
+def preprocess_features(df, used_cols):
     df_clean = df.copy()
-    df_clean = df_clean[NORM_COLS].apply(pd.to_numeric, errors='coerce')
-    df_clean = df_clean[NORM_COLS].fillna(df_clean[NORM_COLS].mean())
+    df_clean = df_clean[used_cols].apply(pd.to_numeric, errors='coerce')
+    df_clean = df_clean[used_cols].fillna(df_clean[used_cols].mean())
     return df_clean
 
-def normalize_features(features_df, train_mask):
+def normalize_features(features_df, train_mask, used_cols):
     """
     Normalization of features using Z-score normalization
     return: normalized and cleaned features_df
     """
     scaler = StandardScaler()
-    scaler.fit(features_df.loc[train_mask,NORM_COLS])
-    scaled_features_df = scaler.transform(features_df[NORM_COLS])
+    scaler.fit(features_df.loc[train_mask,used_cols])
+    scaled_features_df = scaler.transform(features_df[used_cols])
 
     return scaled_features_df.copy()
 
@@ -124,8 +126,8 @@ def get_dataset(split_name= None, split_type = None):
     train_mask, val_mask, test_mask = manage_splits(split_name, num_nodes, create_sp)
 
     Y_np = encode_labels(features_df)
-    features_df = preprocess_features(features_df)
-    X_np = normalize_features(features_df, train_mask)
+    features_df = preprocess_features(features_df, used_cols=cols)
+    X_np = normalize_features(features_df, train_mask, cols)
     edge_index_np = edges_df.values.T
 
 
@@ -147,5 +149,5 @@ if __name__ == '__main__':
     print("size training:", train_mask.sum())
     print("size val:", val_mask.sum())
     print("size test:", test_mask.sum())
-    save_data_obj(data, 'presidential_election')
+    #save_data_obj(data, 'presidential_election')
 
