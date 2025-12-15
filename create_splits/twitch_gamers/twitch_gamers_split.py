@@ -2,17 +2,22 @@ import pandas as pd
 import numpy as np
 import torch
 import warnings
+import os
 
 from sklearn.preprocessing import StandardScaler, MultiLabelBinarizer
 from torch_geometric.data import Data
+from pathlib import Path
 from torch_geometric.data.remote_backend_utils import num_nodes
 
-from utils.data_loader import load_twitch_gamers, DATASET_CONFIGS
+from utils.data_loader import load_twitch_gamers, DATASET_CONFIGS, save_data_obj
 from utils.mask_creation import _create_mask
 from create_splits.split_manager import save_split
 
 DATASET_NAME = 'twitch_gamers'
 CONFIG = DATASET_CONFIGS[DATASET_NAME]
+CURRENT_DIR = Path(__file__).parent.parent.resolve()
+PROJECT_ROOT = CURRENT_DIR
+DATA_ROOT = PROJECT_ROOT / 'split_data'/ DATASET_NAME
 
 SPLIT_REGISTRY = {
     'split_0': 'ENGB',
@@ -82,7 +87,7 @@ def create_country_splits(num_train_nodes, num_test_nodes):
     return _create_mask(num_nodes, train_indices, val_nodes, test_nodes)
 
 
-def save_all_splits():
+def save_all_splits_json():
     data = load_twitch_gamers(CONFIG)
     features_df = preprocess_twitch_gamers(data)
     train_df = features_df[TRAIN_COUNTRY]
@@ -119,50 +124,68 @@ def check_feature_overlap(features_map, source_country, target_country):
     if avg_games_per_user < 1.0:
         print("CRITICAL ISSUE: The Target users play almost NONE of the games the Source users played.")
 
+def save_splits_pt():
+    data = load_twitch_gamers(DATASET_CONFIGS[DATASET_NAME])
+    features_df = preprocess_twitch_gamers(data)
+
+    ALL_COUNTRIES = [TRAIN_COUNTRY]+ list(SPLIT_REGISTRY.keys())
+    unqiue_countries = set(ALL_COUNTRIES)
+
+    for country in unqiue_countries:
+        df_feats = features_df[country]
+        Y_tensor = torch.from_numpy(df_feats['mature'].values).long()
+        X_np = df_feats.drop(columns=['mature'], errors='ignore').astype(float).values
+        X_tensor = torch.from_numpy(X_np).float()
+
+        edges_df = data[country]['edges_df']
+        edge_index_np = edges_df.values.T
+        edge_index_tensor = torch.from_numpy(edge_index_np).long()
+
+        country_data = Data(x=X_tensor, edge_index=edge_index_tensor, y=Y_tensor)
+        country_specific_name = f"{DATASET_NAME}_{country}"
+        save_data_obj(country_data, country_specific_name)
+
+
 def get_dataset(split_name = None):
 
-    twitch_data = load_twitch_gamers(DATASET_CONFIGS[DATASET_NAME])
-    features_df = preprocess_twitch_gamers(twitch_data)
-    TEST_COUNTRY = SPLIT_REGISTRY[split_name]
+    train_country = TRAIN_COUNTRY
+    test_country = SPLIT_REGISTRY[split_name]
 
-    X_train =  features_df[TRAIN_COUNTRY]
-    X_test = features_df[TEST_COUNTRY]
+    base_path = DATA_ROOT / 'split_data'
 
-    drop_cols = ['mature']
-    X_train_np = X_train.drop(columns=drop_cols, errors='ignore').astype(float).values.copy()
-    X_test_np = X_test.drop(columns=drop_cols, errors='ignore').astype(float).values.copy()
-    X_np = np.vstack([X_train_np, X_test_np])
-    X_tensor = torch.from_numpy(X_np).float()
+    train_name = f"{DATASET_NAME}_{train_country}"
+    test_name = f"{DATASET_NAME}_{test_country}"
 
-    Y_train = X_train['mature'].values
-    Y_test= X_test['mature'].values
-    Y_np = np.concatenate([Y_train, Y_test])
-    Y_tensor = torch.from_numpy(Y_np).long()
+    train_file = base_path / train_name / f"{train_name}_data.pt"
+    test_file = base_path / test_name / f"{test_name}_data.pt"
 
-    edges_train = twitch_data[TRAIN_COUNTRY]['edges_df']
-    edges_test = twitch_data[TEST_COUNTRY]['edges_df']
+    train_data = torch.load(train_file)
+    test_data = torch.load(test_file)
 
-    train_edges_np = edges_train.values.T
-    test_edges_np = edges_test.values.T
-    test_edges_np += len(X_train)
-    edges_index_np = np.hstack([train_edges_np, test_edges_np])
-    edge_index_tensor = torch.from_numpy(edges_index_np).long()
+    X = torch.cat([train_data.x, test_data.x], dim=0)
+    Y = torch.cat([train_data.y, test_data.y], dim=0)
 
-    train_mask, val_mask, test_mask = create_country_splits(len(X_train), len(X_test))
-    check_feature_overlap(features_df, TEST_COUNTRY, TEST_COUNTRY)
+    num_train_nodes = train_data.x.shape[0]
+    num_test_nodes = test_data.x.shape[0]
+
+    test_edges = train_data.edge_index + num_train_nodes
+
+    edge_index = torch.cat([train_data.edge_index, test_edges], dim=1)
+
+    train_mask, val_mask, test_mask = create_country_splits(num_train_nodes, num_test_nodes)
 
     train_mask = torch.from_numpy(train_mask).bool()
     val_mask = torch.from_numpy(val_mask).bool()
     test_mask = torch.from_numpy(test_mask).bool()
 
-    data = Data(x= X_tensor, edge_index= edge_index_tensor, y = Y_tensor)
+    data = Data(x=X, edge_index=edge_index, y=Y)
 
     return data, train_mask, val_mask, test_mask
-
 
 
 if __name__ == '__main__':
 
     data = load_twitch_gamers(DATASET_CONFIGS[DATASET_NAME])
     features_df = preprocess_twitch_gamers(data)
-    save_all_splits()
+    #save_all_splits()
+    save_splits_pt()

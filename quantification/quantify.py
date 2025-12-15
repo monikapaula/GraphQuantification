@@ -9,7 +9,7 @@ from quantification.wrapper import WrapperClassifier
 from train_classifier import MODEL_CONFIG
 
 DATASET_NAME = 'deezer_europe'
-SPLIT_NAME = 'split_3'
+SPLIT_NAME = 'split_0'
 CLASSIFIER_MODEL = 'GCN'
 DEVICE = 'cpu'
 BASE_DIR = 'split_data'
