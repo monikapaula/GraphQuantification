@@ -44,7 +44,7 @@ def categorize_by_maj(stats):
     mostly_female = s[(s['gender1_share'] >= majority) & (s['gender2_cnt'] > 0)]['artist_id'].tolist()
     return mostly_male, mostly_female
 
-def create_gender_split(features_df, target_df ):
+def female_gender_split(features_df, target_df):
     """
     creates a shift between male and female users based on the
     artistes they listen to
@@ -90,10 +90,10 @@ def create_gender_split(features_df, target_df ):
 
     # split_0: training_data dominated by 1, test_data dominated by 0 (male)
     # split_1: training_data_dominated by 0, test_data dominated by 1 (female)
-    n_val = int(len(male_users) * val_frac)
-    val_nodes = male_users[:n_val]
-    train_nodes = male_users[n_val:]
-    test_nodes = female_users
+    n_val = int(len(female_users) * val_frac)
+    val_nodes = female_users[:n_val]
+    train_nodes = female_users[n_val:]
+    test_nodes = male_users
 
     overlap = np.intersect1d(train_nodes, test_nodes)
     if len(overlap) > 0:
@@ -106,6 +106,3 @@ def create_gender_split(features_df, target_df ):
     print("Num typical female users:", len(female_users))
 
     return _create_mask(num_nodes, train_nodes, val_nodes, test_nodes)
-
-
-

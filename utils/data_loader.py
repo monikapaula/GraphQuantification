@@ -138,3 +138,5 @@ def load_twitch_gamers(cfg):
 
     return all_datasets
 
+if __name__ == '__main__':
+    print(DATA_ROOT)
