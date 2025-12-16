@@ -3,8 +3,8 @@ import torch
 
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from torch_geometric.data import Data
-from utils.data_loader import load_dataset, DATASET_CONFIGS, save_data_obj
-from create_splits.split_manager import save_split, load_split
+from utils.data_loader import load_dataset, DATASET_CONFIGS, save_data_obj, DATA_ROOT
+from create_splits.split_manager import save_split
 from create_splits.presidential_election.random_split import create_random_split
 from create_splits.presidential_election.geographic_split import create_geographic_split
 from create_splits.presidential_election.coast_split import create_coast_split
@@ -51,7 +51,7 @@ def load_data():
         feature_filename= CONFIG['feature_filename'],
         edges_filename=CONFIG['edges_filename'],
     )
-    print(features_df.columns)
+    #print(features_df.columns)
     #print(len(features_df.columns))
     return features_df, edges_df
 
@@ -96,58 +96,60 @@ def manage_splits(split_name, num_nodes, create_sp):
     save_split(DATASET_NAME, split_name, train_mask, val_mask, test_mask)
     return train_mask, val_mask, test_mask
 
-def get_dataset(split_name= None, split_type = None):
-
+def save_splits_pt():
     features_df, edges_df = load_data()
     num_nodes = len(features_df)
     Y_np = encode_labels(features_df)
-    cols = NORM_COLS.copy()
 
-    if split_type is None:
-        if split_name in SPLIT_REGISTRY:
-            split_type = SPLIT_REGISTRY[split_name]
-        else:
-            print(f"Split name {split_name} not in registry")
+    edge_index = torch.from_numpy(edges_df.values.T).long()
+    Y_tensor = torch.from_numpy(Y_np).float()
 
-    if split_type == "geographic":
-        create_sp = lambda: create_geographic_split(features_df,VALIDATION_RATIO)
-    elif split_type == "random":
-        create_sp = lambda: create_random_split(num_nodes, TRAIN_RATIO,VALIDATION_RATIO)
-    elif split_type == "coast":
-        create_sp = lambda: create_coast_split(features_df,Y_np)
-    elif split_type == "metropolitan":
-        create_sp = lambda: create_metro_split(features_df)
-        for col in METRO_DROP_COLS:
-            if col in cols:
-                cols.remove(col)
-    else:
-        raise ValueError("Unknown split type")
+    for split_name, split_type in SPLIT_REGISTRY.items():
+        current_cols = NORM_COLS.copy()
 
-    train_mask, val_mask, test_mask = manage_splits(split_name, num_nodes, create_sp)
+        if split_type == 'geographic':
+            train_mask, val_mask, test_mask = create_geographic_split(features_df, VALIDATION_RATIO)
+        elif split_type == 'random':
+            train_mask, val_mask, test_mask = create_random_split(num_nodes, TRAIN_RATIO, VALIDATION_RATIO)
+        elif split_type == 'coast':
+            train_mask, val_mask, test_mask = create_coast_split(features_df, TEST_RATIO)
+        elif split_type == 'metropolitan':
+            train_mask, val_mask, test_mask = create_metro_split(features_df)
+            for col in METRO_DROP_COLS:
+                if col in current_cols:
+                    current_cols.remove(col)
 
-    Y_np = encode_labels(features_df)
-    features_df = preprocess_features(features_df, used_cols=cols)
-    X_np = normalize_features(features_df, train_mask, cols)
-    edge_index_np = edges_df.values.T
+        features_clean = preprocess_features(features_df, current_cols)
+        scaler = StandardScaler()
+        scaler.fit(features_clean.loc[train_mask, current_cols])
+
+        X_np = scaler.transform(features_clean[current_cols])
+        X_tensor = torch.from_numpy(X_np).float()
+
+        data = Data(x=X_tensor, edge_index=edge_index, y=Y_tensor)
+
+        data.train_mask = torch.from_numpy(train_mask).bool()
+        data.val_mask = torch.from_numpy(val_mask).bool()
+        data.test_mask = torch.from_numpy(test_mask).bool()
+
+        save_dir = DATA_ROOT/"split_data"/DATASET_NAME/split_name
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        file_path = save_dir/f"{split_name}_data.pt"
+        torch.save(data, file_path)
 
 
-    X_tensor = torch.from_numpy(X_np).float()
-    edge_index = torch.from_numpy(edge_index_np).long()
-    Y_tensor = torch.from_numpy(Y_np).long()
+def get_dataset(split_name):
 
-    data = Data(x=X_tensor, edge_index=edge_index, y=Y_tensor)
+    file_path = DATA_ROOT/"split_data"/DATASET_NAME/split_name/f"{split_name}_data.pt"
+    data = torch.load(file_path, weights_only=False)
 
-    train_mask =torch.from_numpy(train_mask).to(torch.bool)
-    val_mask = torch.from_numpy(val_mask).to(torch.bool)
-    test_mask = torch.from_numpy(test_mask).to(torch.bool)
-
-    return data, train_mask, val_mask, test_mask
+    return data, data.train_mask, data.val_mask, data.test_mask
 
 
 if __name__ == '__main__':
+    save_splits_pt()
     data, train_mask, val_mask, test_mask = get_dataset(split_name='split_3')
     print("size training:", train_mask.sum())
     print("size val:", val_mask.sum())
     print("size test:", test_mask.sum())
-    #save_data_obj(data, 'presidential_election')
-

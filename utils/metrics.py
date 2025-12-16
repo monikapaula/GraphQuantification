@@ -15,6 +15,16 @@ def classifier_mae(predictions, ground_truth):
 
     return mae, true_prev, pred_prev
 
+def macro_f1(model, x, edge_index, mask, y):
+    model.eval()
+    with torch.no_grad():
+        out = model(x, edge_index)
+        pred = out.argmax(dim=1)
+        y_true = y[mask].cpu().numpy()
+        y_pred = pred[mask].cpu().numpy()
+
+    return f1_score(y_true, y_pred, average='macro', zero_division=0)
+
 def extensive_evaluate(model, x, edge_index, mask, y):
     model.eval()
     with torch.no_grad():
@@ -32,7 +42,7 @@ def extensive_evaluate(model, x, edge_index, mask, y):
         print("\n--- Classification Report ---")
         print(classification_report(y_true, y_pred, target_names=['Class 0', 'Class 1'], zero_division=0))
 
-    marco_f1= f1_score(y_true, y_pred, average='macro', zero_division=0)
+    marco_f1= macro_f1(model, x, edge_index, mask, y)
     return marco_f1
 
 def class_balance(y:torch.Tensor, mask,name):

@@ -1,15 +1,17 @@
 import copy
 import torch
+import torch.nn as nn
 import torch.optim as optim
 import argparse
 
 from create_splits.presidential_election.presidential_el_split import compute_class_weights, get_dataset as get_election_dataset
 from create_splits.deezer_europe.deezer_europe_split import get_dataset as get_deezer_dataset
 from create_splits.twitch_gamers.twitch_gamers_split import get_dataset as get_twitch_gamers_dataset
-from utils.metrics import classifier_mae, extensive_evaluate, class_balance
+from utils.metrics import classifier_mae, extensive_evaluate, class_balance, macro_f1
 from models.gcn import GCN
 from models.mlp import MLP
-from utils.focal_loss import FocalLoss
+from models.graphSage import SAGE
+#from utils.focal_loss import FocalLoss
 from utils.save_model import save_model
 from utils.early_stopping import EarlyStopper
 
@@ -18,8 +20,8 @@ MODEL_CONFIG = {
     'input_dim': None,
     'hidden_dim': 128,
     'output_dim': 2,
-    'dropout': 0.3,
-    'lr': 1e-3,
+    'dropout': 0.2,
+    'lr': 0.01,
     'save_model': True
 }
 
@@ -34,6 +36,8 @@ def load_model(config:dict):
         return GCN(in_dim, hidden_dim, output_dim,dropout)
     elif name == 'MLP':
         return MLP(in_dim, hidden_dim, output_dim,dropout)
+    elif name == 'SAGE':
+        return SAGE(in_dim, hidden_dim, output_dim,dropout)
     else:
         raise ValueError(f"Model {name} not recognized.")
 
@@ -53,7 +57,6 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
     config['input_dim'] = x.size(1)
     model = load_model(config).to(device)
     optimizer = optim.Adam(model.parameters(), lr=config['lr'])
-
     x, edge_index, y = x.to(device), edge_index.to(device), y.to(device)
     train_mask, val_mask, test_mask = train_mask.to(device), val_mask.to(device), test_mask.to(device)
 
@@ -61,9 +64,11 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
         class_weights = class_weights.to(device)
 
     #gamma parameter for focusing on hard examples
-    criterion = FocalLoss(alpha=class_weights, gamma=2.0)
+    #criterion = FocalLoss(alpha=class_weights, gamma=2.0)
+    criterion = nn.NLLLoss(weight=class_weights)
     early_stopper = EarlyStopper(patience=20, min_delta=0.001 )
     best_model_state = None
+    best_val_metric = -float('inf')
 
     for epoch in range(args.epochs):
         #Training step
@@ -73,7 +78,6 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
         #output the log-probabilities
         log_probabilities = model(x, edge_index)
         loss = criterion(log_probabilities[train_mask], y[train_mask])
-
         loss.backward()
         optimizer.step()
 
@@ -84,13 +88,16 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
             val_loss = criterion(out_val[val_mask], y[val_mask]).item()
             val_acc = evaluate(model, x, edge_index, val_mask, y)
             train_acc = evaluate(model, x, edge_index, train_mask, y)
+            val_macro_f1 = macro_f1(model, x, edge_index, val_mask, y)
 
-        if epoch % 100 == 0 or epoch == 1:
+        if epoch % 10 == 0 or epoch == 0:
             print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
 
-        #Early Stopping
-        if val_loss < early_stopper.min_validation_loss:
+        if val_macro_f1 < best_val_metric + 1e-4:
+            best_val_metric = val_macro_f1
             best_model_state = copy.deepcopy(model.state_dict())
+
+        #Early Stopping
         if early_stopper.early_stop(val_loss):
             break
 
@@ -121,7 +128,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str, choices=['deezer_europe', 'presidential_election', 'twitch_gamers'],
                         help='Name of datasets')
     parser.add_argument('--split', type=str)
-    parser.add_argument('--model', type=str, choices=['GCN', 'MLP'], default='GCN')
+    parser.add_argument('--model', type=str, choices=['GCN', 'MLP','SAGE'], default='GCN')
     parser.add_argument('--epochs', type=int, default=300)
     args = parser.parse_args()
 
@@ -135,7 +142,7 @@ if __name__ == '__main__':
     elif DATASET == 'deezer_europe':
         data, train_mask, val_mask, test_mask = get_deezer_dataset(split_name=SPLIT_NAME)
     elif DATASET == 'twitch_gamers':
-        data,train_mask,val_mask,test_mask = get_twitch_gamers_dataset(SPLIT_NAME)
+        data,train_mask,val_mask,test_mask = get_twitch_gamers_dataset(split_name=SPLIT_NAME)
     else:
         raise ValueError(f"Unknown dataset '{DATASET}'")
 

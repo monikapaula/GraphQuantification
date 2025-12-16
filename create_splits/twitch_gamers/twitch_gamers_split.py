@@ -2,22 +2,18 @@ import pandas as pd
 import numpy as np
 import torch
 import warnings
-import os
 
 from sklearn.preprocessing import StandardScaler, MultiLabelBinarizer
 from torch_geometric.data import Data
-from pathlib import Path
-from torch_geometric.data.remote_backend_utils import num_nodes
+from sklearn.decomposition import TruncatedSVD
 
-from utils.data_loader import load_twitch_gamers, DATASET_CONFIGS, save_data_obj
+from utils.data_loader import load_twitch_gamers, DATASET_CONFIGS, DATA_ROOT
 from utils.mask_creation import _create_mask
 from create_splits.split_manager import save_split
 
 DATASET_NAME = 'twitch_gamers'
 CONFIG = DATASET_CONFIGS[DATASET_NAME]
-CURRENT_DIR = Path(__file__).parent.parent.resolve()
-PROJECT_ROOT = CURRENT_DIR
-DATA_ROOT = PROJECT_ROOT / 'split_data'/ DATASET_NAME
+PROJECT_ROOT = DATA_ROOT / 'split_data'/ DATASET_NAME
 
 SPLIT_REGISTRY = {
     'split_0': 'ENGB',
@@ -34,6 +30,7 @@ def preprocess_twitch_gamers (df):
     takes the dataframes of each country and returns the normalized columns (view, days)
     """
     final_features_df = {}
+    svd_components = 16
 
     target_df_de = df[TRAIN_COUNTRY]['target_df']
     features_df_de = df[TRAIN_COUNTRY]['features_df']
@@ -41,6 +38,10 @@ def preprocess_twitch_gamers (df):
 
     mlb = MultiLabelBinarizer(sparse_output=False)
     mlb.fit(games_list_de)
+
+    games_binary = mlb.transform(games_list_de).astype(np.float64)
+    svd = TruncatedSVD(n_components= svd_components,algorithm= 'arpack' ,random_state=42)
+    svd.fit(games_binary)
 
     norm_target_df = target_df_de[['days', 'views']].copy()
     norm_target_df['views'] = np.log1p(norm_target_df['views'])
@@ -53,9 +54,10 @@ def preprocess_twitch_gamers (df):
         features_df = data['features_df']
 
         game_lists = [features_df.get(str(user_id), []) for user_id in target_df['new_id']]
-        games = mlb.transform(game_lists)
-        game_cols = [f"game_{g}" for g in mlb.classes_]
-        df_games = pd.DataFrame(games, columns=game_cols, index=target_df.index)
+        games = mlb.transform(game_lists).astype(np.float64)
+        games_svd = svd.transform(games)
+        svd_cols =[f"game_svd_{i}" for i in range(svd_components)]
+        df_games = pd.DataFrame(games_svd, columns=svd_cols, index=target_df.index)
 
         curr_norm_df = target_df[['days', 'views']].copy()
         curr_norm_df['views'] = np.log1p(curr_norm_df['views'])
@@ -78,13 +80,14 @@ def create_country_splits(num_train_nodes, num_test_nodes):
     num_nodes = num_train_nodes + num_test_nodes
 
     train_indices = list (range(0, num_train_nodes))
-    val_indices = list(range(num_train_nodes, num_nodes))
+    test_indices = list(range(num_train_nodes, num_nodes))
 
-    split_pt = int(len(val_indices) * 0.2)
-    val_nodes = val_indices[:split_pt]
-    test_nodes = val_indices[split_pt:]
+    split_pt = int(len(train_indices) * 0.8)
+    train_nodes = train_indices[:split_pt]
+    val_nodes = train_indices[split_pt:]
+    test_nodes = test_indices
 
-    return _create_mask(num_nodes, train_indices, val_nodes, test_nodes)
+    return _create_mask(num_nodes, train_nodes, val_nodes, test_nodes)
 
 
 def save_all_splits_json():
@@ -128,64 +131,56 @@ def save_splits_pt():
     data = load_twitch_gamers(DATASET_CONFIGS[DATASET_NAME])
     features_df = preprocess_twitch_gamers(data)
 
-    ALL_COUNTRIES = [TRAIN_COUNTRY]+ list(SPLIT_REGISTRY.keys())
-    unqiue_countries = set(ALL_COUNTRIES)
+    df_train = features_df[TRAIN_COUNTRY]
+    x_train = torch.from_numpy(df_train.drop(columns =['mature'], errors='ignore').values).float()
+    y_train = torch.from_numpy(df_train['mature'].values).long()
 
-    for country in unqiue_countries:
-        df_feats = features_df[country]
-        Y_tensor = torch.from_numpy(df_feats['mature'].values).long()
-        X_np = df_feats.drop(columns=['mature'], errors='ignore').astype(float).values
-        X_tensor = torch.from_numpy(X_np).float()
+    edges_train_df = data[TRAIN_COUNTRY]['edges_df']
+    edge_index_train= torch.from_numpy(edges_train_df.values.T).long()
 
-        edges_df = data[country]['edges_df']
-        edge_index_np = edges_df.values.T
-        edge_index_tensor = torch.from_numpy(edge_index_np).long()
+    num_train_nodes = x_train.size(0)
 
-        country_data = Data(x=X_tensor, edge_index=edge_index_tensor, y=Y_tensor)
-        country_specific_name = f"{DATASET_NAME}_{country}"
-        save_data_obj(country_data, country_specific_name)
+    for split_name, test_country in SPLIT_REGISTRY.items():
+        print(f"Processing {split_name} [Source: {TRAIN_COUNTRY} -> Target: {test_country}]")
+        df_test = features_df[test_country]
+        x_test = torch.from_numpy(df_test.drop(columns =['mature'], errors='ignore').values).float()
+        y_test = torch.from_numpy(df_test['mature'].values).long()
+        edges_test_df = data[test_country]['edges_df']
+        edge_index_test = torch.from_numpy(edges_test_df.values.T).long()
 
+        num_test_nodes = x_test.size(0)
 
-def get_dataset(split_name = None):
+        x_combined = torch.cat((x_train, x_test), dim=0)
+        y_combined = torch.cat((y_train, y_test), dim=0)
 
-    train_country = TRAIN_COUNTRY
-    test_country = SPLIT_REGISTRY[split_name]
+        edge_index_shifted = edge_index_test + num_train_nodes
+        edge_index_combined = torch.cat((edge_index_train, edge_index_shifted), dim=1)
 
-    base_path = DATA_ROOT / 'split_data'
+        train_mask,val_mask,test_mask = create_country_splits(num_train_nodes, num_test_nodes)
 
-    train_name = f"{DATASET_NAME}_{train_country}"
-    test_name = f"{DATASET_NAME}_{test_country}"
+        data_obj = Data(x=x_combined, edge_index=edge_index_combined, y=y_combined)
+        data_obj.train_mask = torch.from_numpy(train_mask).bool()
+        data_obj.val_mask = torch.from_numpy(val_mask).bool()
+        data_obj.test_mask = torch.from_numpy(test_mask).bool()
 
-    train_file = base_path / train_name / f"{train_name}_data.pt"
-    test_file = base_path / test_name / f"{test_name}_data.pt"
+        save_dir = DATA_ROOT / "split_data" / DATASET_NAME / split_name
+        save_dir.mkdir(parents=True, exist_ok=True)
+        file_path = save_dir / f"{split_name}_data.pt"
+        torch.save(data_obj, file_path)
+        print(f"Saved {split_name} data to {file_path}")
 
-    train_data = torch.load(train_file)
-    test_data = torch.load(test_file)
+def get_dataset(split_name):
 
-    X = torch.cat([train_data.x, test_data.x], dim=0)
-    Y = torch.cat([train_data.y, test_data.y], dim=0)
+    file_path = DATA_ROOT / "split_data" / DATASET_NAME / split_name / f"{split_name}_data.pt"
+    data = torch.load(file_path, weights_only=False)
 
-    num_train_nodes = train_data.x.shape[0]
-    num_test_nodes = test_data.x.shape[0]
-
-    test_edges = train_data.edge_index + num_train_nodes
-
-    edge_index = torch.cat([train_data.edge_index, test_edges], dim=1)
-
-    train_mask, val_mask, test_mask = create_country_splits(num_train_nodes, num_test_nodes)
-
-    train_mask = torch.from_numpy(train_mask).bool()
-    val_mask = torch.from_numpy(val_mask).bool()
-    test_mask = torch.from_numpy(test_mask).bool()
-
-    data = Data(x=X, edge_index=edge_index, y=Y)
-
-    return data, train_mask, val_mask, test_mask
+    return data, data.train_mask, data.val_mask, data.test_mask
 
 
 if __name__ == '__main__':
 
     data = load_twitch_gamers(DATASET_CONFIGS[DATASET_NAME])
     features_df = preprocess_twitch_gamers(data)
-    #save_all_splits()
+    print("dataroot",DATA_ROOT)
+    #save_all_splits_json()
     save_splits_pt()

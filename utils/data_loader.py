@@ -2,10 +2,8 @@ import zipfile
 import pandas as pd
 import torch
 import json
-import numpy as np
 
 from pathlib import Path
-from torch_geometric.data import Data
 
 DATA_ROOT = Path(__file__).parent.parent.resolve()
 print(DATA_ROOT)
@@ -52,11 +50,15 @@ def save_data_obj (data_obj, dataset_name):
     torch.save(data_obj, file_path)
     print(f"Saved {dataset_name}_data.pt to {file_path}")
 
-def load_data_object(dataset_name: str, base_dir="split_data"):
+def load_data_object(dataset_name: str, base_dir="split_data", split_name: str | None = None):
     """
     Loads a saved PyG Data object for a dataset.
     """
-    data_path = DATA_ROOT/ f"{base_dir}/{dataset_name}/{dataset_name}_data.pt"
+    if dataset_name in ['twitch_gamers', 'presidential_election']:
+        data_path = DATA_ROOT / base_dir / dataset_name / split_name / f"{split_name}_data.pt"
+    else:
+        data_path = DATA_ROOT/ f"{base_dir}/{dataset_name}/{dataset_name}_data.pt"
+    print(f"Loading {dataset_name}_data.pt from {data_path}")
     data = torch.load(data_path, weights_only=False)
     return data
 
@@ -83,6 +85,9 @@ def load_model(dataset_name, model_type, split_name, model_config, device='cpu')
     elif model_type == 'MLP':
         from models.mlp import MLP
         model = MLP(input_dim, hidden_dim, output_dim, dropout)
+    elif model_type == 'SAGE':
+        from models.graphSage import SAGE
+        model = SAGE(input_dim, hidden_dim, output_dim, dropout)
     else:
         raise ValueError(f"Model {model_type} not recognized.")
 
