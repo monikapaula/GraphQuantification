@@ -1,5 +1,6 @@
 import numpy as np
 import quapy as qp
+import argparse
 from quapy.data import LabelledCollection
 from quapy.method.aggregative import ACC, PCC, PACC, KDEyCS
 
@@ -8,22 +9,23 @@ from create_splits.split_manager import load_split
 from quantification.wrapper import WrapperClassifier
 from train_classifier import MODEL_CONFIG
 
-DATASET_NAME = 'presidential_election'
-SPLIT_NAME = 'split_2'
-CLASSIFIER_MODEL = 'GCN'
-DEVICE = 'cpu'
-BASE_DIR = 'split_data'
-
-def quantify(MODEL_CONFIG, DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, DEVICE, BASE_DIR):
+def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL):
+    BASE_DIR = 'split_data'
+    DEVICE = 'cpu'
 
     data = load_data_object(DATASET_NAME, base_dir=BASE_DIR, split_name=SPLIT_NAME)
     #print("Shape",data.x.shape)
     num_nodes = data.num_nodes
     #print(f"Dataset '{DATASET_NAME}' loaded. Nodes: {data.num_nodes}, Features: {data.x.size(1)}")
-    MODEL_CONFIG['input_dim'] = data.x.size(1)
-    MODEL_CONFIG['output_dim'] = len(np.unique(data.y.cpu().numpy()))
-
-    model = load_model(DATASET_NAME, CLASSIFIER_MODEL, SPLIT_NAME, MODEL_CONFIG,DEVICE)
+    model, loaded_config = load_model(
+        dataset_name=DATASET_NAME,
+        model_type=CLASSIFIER_MODEL,
+        split_name=SPLIT_NAME,
+        model_config= None,
+        device=DEVICE,
+    )
+    assert loaded_config['input_dim'] == data.x.size(1), \
+        f"Input dim mismatch: checkpoint={loaded_config['input_dim']} data={data.x.size(1)}"
     #print(f"Model loaded for dataset='{DATASET_NAME}', split='{SPLIT_NAME}', model='{CLASSIFIER_MODEL}'.")
 
     wrapper = WrapperClassifier(model, data, device=DEVICE)
@@ -56,8 +58,16 @@ def quantify(MODEL_CONFIG, DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, DEVICE, B
         mae = qp.error.mae(test_set.prevalence(), est_prev)
         print(f"{name}: Estimated = {np.round(est_prev, 4)}\tMAE = {mae:.4f}")
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model', type=str)
+    parser.add_argument('--dataset', type=str)
+    parser.add_argument('--split', type=str)
+    return parser.parse_args()
+
 if __name__ == '__main__':
-    quantify(MODEL_CONFIG, DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, DEVICE, BASE_DIR)
+    args = parse_args()
+    quantify(args.dataset, args.split, args.model)
 
 
 

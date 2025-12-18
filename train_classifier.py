@@ -117,8 +117,9 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
         mae, true_prev, pred_prev = classifier_mae(y_pred, y_true)
         print(f"Classifier MAE on test set: {mae:.4f}")
 
-    if config.get('save_model', False):
-        save_model(model, config, dataset_name=run_name)
+    if config.get('save_model', True):
+        save_model(model, config, dataset_name=run_name, split_name=SPLIT_NAME)
+        print(f"Model saved to {config['save_model_path']}")
 
 
     return model

@@ -30,16 +30,23 @@ def preprocess_twitch_gamers (df):
     takes the dataframes of each country and returns the normalized columns (view, days)
     """
     final_features_df = {}
-    svd_components = 16
+    svd_components = 32
 
     target_df_de = df[TRAIN_COUNTRY]['target_df']
     features_df_de = df[TRAIN_COUNTRY]['features_df']
-    games_list_de = [features_df_de.get(str(user_id), []) for user_id in target_df_de['new_id']]
+    #games_list_de = [features_df_de.get(str(user_id), []) for user_id in target_df_de['new_id']]
+    all_games_lists = []
+    for lang, data in df.items():
+        target_df = data['target_df']
+        features_df = data['features_df']
+
+        game_lists = [features_df.get(str(user_id), []) for user_id in target_df['new_id']]
+        all_games_lists.extend(game_lists)
 
     mlb = MultiLabelBinarizer(sparse_output=False)
-    mlb.fit(games_list_de)
+    mlb.fit(all_games_lists)
 
-    games_binary = mlb.transform(games_list_de).astype(np.float64)
+    games_binary = mlb.transform(all_games_lists).astype(np.float64)
     svd = TruncatedSVD(n_components= svd_components,algorithm= 'arpack' ,random_state=42)
     svd.fit(games_binary)
 
@@ -182,5 +189,5 @@ if __name__ == '__main__':
     data = load_twitch_gamers(DATASET_CONFIGS[DATASET_NAME])
     features_df = preprocess_twitch_gamers(data)
     print("dataroot",DATA_ROOT)
-    #save_all_splits_json()
+    save_all_splits_json()
     save_splits_pt()

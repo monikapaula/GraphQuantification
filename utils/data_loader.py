@@ -72,12 +72,23 @@ def load_model(dataset_name, model_type, split_name, model_config, device='cpu')
     else:
         print(f"Model {model_type} not found.")
 
+
     model_path = DATA_ROOT / "saved_models" / model_fname
+
+    if not model_path.exists():
+        raise FileNotFoundError(f"Could not find model file at: {model_path}")
+    config = torch.load(model_path, map_location=device)
+    model_config = config.get("model_config")
+    if model_config is None:
+        # Debug print to see what IS in there
+        print(f"DEBUG: Keys found in checkpoint: {list(config.keys())}")
+        raise KeyError(f"The file {model_fname} does not contain 'model_config'. ")
 
     input_dim = model_config['input_dim']
     hidden_dim = model_config['hidden_dim']
     output_dim = model_config['output_dim']
     dropout = model_config.get('dropout', 0.5)
+    model_type = model_config.get('name', model_type).upper()
 
     if model_type == 'GCN':
         from models.gcn import GCN
@@ -91,12 +102,12 @@ def load_model(dataset_name, model_type, split_name, model_config, device='cpu')
     else:
         raise ValueError(f"Model {model_type} not recognized.")
 
-    state_dict = torch.load(model_path, map_location=device)
+    state_dict = config["model_state_dict"]
     model.load_state_dict(state_dict)
     model= model.to(device)
     model.eval()
 
-    return model
+    return model, model_config
 
 def load_deezer_europe(cfg):
     zip_path = cfg['zip_path']
