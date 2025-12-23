@@ -3,6 +3,18 @@ import torch
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error, confusion_matrix, classification_report, f1_score
 
+def compute_class_weights(y):
+    """
+    Compute class weights to handle class imbalance
+    total_samples / (num_classes * num_samples_per_class)
+    """
+    classes, counts = y.unique(return_counts=True)
+    total_samples = y.size(0)
+    num_classes = len(classes)
+
+    weights = total_samples/ (num_classes * counts.float())
+
+    return weights
 
 def prevalence(y, classes):
     return np.array([(y == c).mean() for c in classes])

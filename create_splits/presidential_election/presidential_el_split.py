@@ -78,19 +78,6 @@ def normalize_features(features_df, train_mask, used_cols):
 
     return scaled_features_df.copy()
 
-def compute_class_weights(y):
-    """
-    Compute class weights to handle class imbalance
-    total_samples / (num_classes * num_samples_per_class)
-    """
-    classes, counts = y.unique(return_counts=True)
-    total_samples = y.size(0)
-    num_classes = len(classes)
-
-    weights = total_samples/ (num_classes * counts.float())
-
-    return weights
-
 def manage_splits(split_name, num_nodes, create_sp):
     train_mask, val_mask, test_mask = create_sp()
     save_split(DATASET_NAME, split_name, train_mask, val_mask, test_mask)
