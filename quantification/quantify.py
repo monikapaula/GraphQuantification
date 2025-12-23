@@ -1,13 +1,19 @@
+import os
 import numpy as np
 import quapy as qp
 import argparse
+
 from quapy.data import LabelledCollection
 from quapy.method.aggregative import ACC, PCC, PACC, KDEyCS
+from quapy.model_selection import GridSearchQ
+from quapy.protocol import APP
+from sklearn.isotonic import IsotonicRegression
 
 from utils.data_loader import load_data_object, load_model
 from create_splits.split_manager import load_split
 from quantification.wrapper import WrapperClassifier
-from train_classifier import MODEL_CONFIG
+from utils.sis import compute_confusion, quantification_ppr
+from utils.metrics import plot_probability_distribution
 
 def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL):
     BASE_DIR = 'split_data'
@@ -35,6 +41,7 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL):
 
     all_indices = np.arange(num_nodes)
     classes = np.unique(data.y.cpu().numpy())
+    num_classes = len(classes)
 
     val_indices = all_indices[val_mask]
     test_indices = all_indices[test_mask]
@@ -44,19 +51,42 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL):
     val_set = LabelledCollection(val_indices, val_y, classes=classes)
     test_set = LabelledCollection(test_indices, test_y, classes=classes)
 
+    #Experiments
+    val_protocol = APP(val_set, n_prevalences=11, repeats=1, sample_size=len(val_set))
+    param_grid = {'bandwidth': np.logspace(-3,0,15)}
+
+
     quantifiers = {
         'ACC': ACC(wrapper, fit_classifier=False),
         'PCC': PCC(wrapper, fit_classifier=False),
         'PACC': PACC(wrapper, fit_classifier=False),
-        'KDEy': KDEyCS(wrapper, fit_classifier=False)
+        'KDEy': GridSearchQ(model= KDEyCS(wrapper, fit_classifier=False), param_grid=param_grid,protocol=val_protocol,error='mae', refit=True)
     }
-
+    plot_probability_distribution(wrapper, val_indices, title="Validation Set Probabilities")
     print(f"\nTrue prevalence: {np.round(test_set.prevalence(), 4)}")
     for name, quantifier in quantifiers.items():
         quantifier.fit(val_set.instances, val_set.labels)
         est_prev = quantifier.quantify(test_set.instances)
         mae = qp.error.mae(test_set.prevalence(), est_prev)
         print(f"{name}: Estimated = {np.round(est_prev, 4)}\tMAE = {mae:.4f}")
+
+    sis_path= f"{BASE_DIR}_{DATASET_NAME}_{SPLIT_NAME}_sis.pt"
+    if not os.path.exists(sis_path):
+        print(f"Creating Confusion matrix {sis_path}")
+        compute_confusion(
+            data=data,
+            val_mask=val_mask,
+            test_mask=test_mask,
+            wrapper=wrapper,
+            num_classes=num_classes,
+            save_path=sis_path
+        )
+    try:
+        est_prev_sis = quantification_ppr(sis_path, wrapper, test_mask)
+        mae_sis = qp.error.mae(test_set.prevalence(), est_prev_sis)
+        print(f"SIS-ACC: Estimated = {np.round(est_prev_sis, 4)}\tMAE = {mae_sis:.4f}")
+    except Exception as e:
+        print(f"SIS-ACC: Calculation failed ({e})")
 
 def parse_args():
     parser = argparse.ArgumentParser()

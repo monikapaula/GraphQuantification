@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error, confusion_matrix, classification_report, f1_score
 
 
@@ -69,3 +70,14 @@ def class_balance(y:torch.Tensor, mask,name):
         print(f"Class {cls_id}: Count = {count_val}, Percentage = {percentage:.4%}")
 
     print("-" *30)
+
+def plot_probability_distribution(wrapper, indices, title="Probability Distribution"):
+    probas = wrapper.predict_proba(indices)[:, 1]
+
+    plt.figure(figsize=(8, 5))
+    plt.hist(probas, bins=50, edgecolor='black', alpha=0.7)
+    plt.title(title)
+    plt.xlabel("Predicted Probability (Class 1)")
+    plt.ylabel("Frequency")
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.show()

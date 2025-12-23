@@ -19,13 +19,17 @@ class SAGE(torch.nn.Module):
         self.conv1 = SAGEConv(in_dim, hidden_dim)
         self.conv2 = SAGEConv(hidden_dim, hidden_dim)
         self.lin_out = nn.Linear(hidden_dim, output_dim)
+        self.bn1 = nn.BatchNorm1d(hidden_dim)
+        self.bn2 = nn.BatchNorm1d(hidden_dim)
 
     def forward(self, x, edge_index):
         x = self.conv1(x, edge_index)
+        x= self.bn1(x)
         x = F.elu(x)
         x = self.dropout(x)
 
         x = self.conv2(x, edge_index)
+        x = self.bn2(x)
         x = F.elu(x)
         x = self.dropout(x)
 

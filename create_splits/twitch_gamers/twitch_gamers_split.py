@@ -6,6 +6,7 @@ import warnings
 from sklearn.preprocessing import StandardScaler, MultiLabelBinarizer
 from torch_geometric.data import Data
 from sklearn.decomposition import TruncatedSVD
+from sklearn.feature_extraction.text import TfidfTransformer
 
 from utils.data_loader import load_twitch_gamers, DATASET_CONFIGS, DATA_ROOT
 from utils.mask_creation import _create_mask
@@ -25,58 +26,71 @@ SPLIT_REGISTRY = {
 TRAIN_COUNTRY = 'DE'
 warnings.filterwarnings('ignore', category=UserWarning, module='sklearn')
 
-def preprocess_twitch_gamers (df):
-    """
-    takes the dataframes of each country and returns the normalized columns (view, days)
-    """
+from sklearn.feature_extraction.text import TfidfTransformer
+
+
+def preprocess_twitch_gamers(df):
     final_features_df = {}
-    svd_components = 32
+    svd_components = 128  # Increased from 32 for better signal
 
-    target_df_de = df[TRAIN_COUNTRY]['target_df']
-    features_df_de = df[TRAIN_COUNTRY]['features_df']
-    #games_list_de = [features_df_de.get(str(user_id), []) for user_id in target_df_de['new_id']]
     all_games_lists = []
-    for lang, data in df.items():
-        target_df = data['target_df']
-        features_df = data['features_df']
+    country_codes = list(df.keys())
 
-        game_lists = [features_df.get(str(user_id), []) for user_id in target_df['new_id']]
+    for lang in country_codes:
+        target_df = df[lang]['target_df']
+        features_df = df[lang]['features_df']
+        game_lists = [features_df.get(str(u_id), []) for u_id in target_df['new_id']]
         all_games_lists.extend(game_lists)
 
-    mlb = MultiLabelBinarizer(sparse_output=False)
-    mlb.fit(all_games_lists)
+    mlb = MultiLabelBinarizer(sparse_output=True)  # Use sparse for memory efficiency
+    games_binary = mlb.fit_transform(all_games_lists)
 
-    games_binary = mlb.transform(all_games_lists).astype(np.float64)
-    svd = TruncatedSVD(n_components= svd_components,algorithm= 'arpack' ,random_state=42)
-    svd.fit(games_binary)
+    tfidf = TfidfTransformer()
+    games_tfidf = tfidf.fit_transform(games_binary)
 
-    norm_target_df = target_df_de[['days', 'views']].copy()
-    norm_target_df['views'] = np.log1p(norm_target_df['views'])
+    svd = TruncatedSVD(n_components=svd_components, algorithm='arpack', random_state=42)
+    svd.fit(games_tfidf)
 
-    scaler = StandardScaler()
-    scaler.fit(norm_target_df)
+    # 4. Fit Global Scaler (on ALL countries to prevent distribution shift)
+    all_numeric_data = []
+    for lang in country_codes:
+        temp_df = df[lang]['target_df'][['days', 'views']].copy()
+        temp_df['views'] = np.log1p(temp_df['views'])
+        all_numeric_data.append(temp_df)
 
-    for lang, data in df.items():
-        target_df = data['target_df']
-        features_df = data['features_df']
+    global_scaler = StandardScaler()
+    global_scaler.fit(pd.concat(all_numeric_data))
 
-        game_lists = [features_df.get(str(user_id), []) for user_id in target_df['new_id']]
-        games = mlb.transform(game_lists).astype(np.float64)
-        games_svd = svd.transform(games)
-        svd_cols =[f"game_svd_{i}" for i in range(svd_components)]
-        df_games = pd.DataFrame(games_svd, columns=svd_cols, index=target_df.index)
+    # 5. Transform each country
+    for lang in country_codes:
+        target_df = df[lang]['target_df']
+        features_df = df[lang]['features_df']
 
+        # Process Games (MLB -> TFIDF -> SVD)
+        game_lists = [features_df.get(str(u_id), []) for u_id in target_df['new_id']]
+        curr_games_bin = mlb.transform(game_lists)
+        curr_games_tfidf = tfidf.transform(curr_games_bin)
+        curr_games_svd = svd.transform(curr_games_tfidf)
+
+        df_games = pd.DataFrame(curr_games_svd,
+                                columns=[f"svd_{i}" for i in range(svd_components)],
+                                index=target_df.index)
+
+        # Process Numeric
         curr_norm_df = target_df[['days', 'views']].copy()
         curr_norm_df['views'] = np.log1p(curr_norm_df['views'])
-
-        scaled_vals = scaler.transform(curr_norm_df)
+        scaled_vals = global_scaler.transform(curr_norm_df)
         df_numeric = pd.DataFrame(scaled_vals, columns=['days', 'views'], index=target_df.index)
 
-        df_numeric['partner']= target_df['partner'].values.astype(float)
-        df_numeric ['mature'] = target_df['mature'].values.astype(float)
+        # Add Binary Features
+        df_numeric['partner'] = target_df['partner'].values.astype(float)
+        df_numeric['mature'] = target_df['mature'].values.astype(float)
 
-        features_df = pd.concat([df_numeric, df_games], axis=1)
-        final_features_df[lang] = features_df
+        # Add Country One-Hot (Helping the model realize it's a different graph)
+        for i, code in enumerate(country_codes):
+            df_numeric[f'is_{code}'] = 1.0 if lang == code else 0.0
+
+        final_features_df[lang] = pd.concat([df_numeric, df_games], axis=1)
 
     return final_features_df
 
@@ -189,5 +203,5 @@ if __name__ == '__main__':
     data = load_twitch_gamers(DATASET_CONFIGS[DATASET_NAME])
     features_df = preprocess_twitch_gamers(data)
     print("dataroot",DATA_ROOT)
-    save_all_splits_json()
+    #save_all_splits_json()
     save_splits_pt()
