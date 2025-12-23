@@ -2,6 +2,7 @@ import os
 import numpy as np
 import quapy as qp
 import argparse
+import torch
 
 from quapy.data import LabelledCollection
 from quapy.method.aggregative import ACC, PCC, PACC, KDEyCS
@@ -87,6 +88,10 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL):
         print(f"SIS-ACC: Estimated = {np.round(est_prev_sis, 4)}\tMAE = {mae_sis:.4f}")
     except Exception as e:
         print(f"SIS-ACC: Calculation failed ({e})")
+
+    with torch.no_grad():
+        sample_logits = model(data.x, data.edge_index)[:10]
+        print(f"DEBUG - Erste 10 Logits: {sample_logits}")
 
 def parse_args():
     parser = argparse.ArgumentParser()

@@ -4,10 +4,10 @@ import torch.nn as nn
 import torch.optim as optim
 import argparse
 
-from create_splits.presidential_election.presidential_el_split import compute_class_weights, get_dataset as get_election_dataset
+from create_splits.presidential_election.presidential_el_split import get_dataset as get_election_dataset
 from create_splits.deezer_europe.deezer_europe_split import get_dataset as get_deezer_dataset
 from create_splits.twitch_gamers.twitch_gamers_split import get_dataset as get_twitch_gamers_dataset
-from utils.metrics import classifier_mae, extensive_evaluate, class_balance, macro_f1
+from utils.metrics import classifier_mae, extensive_evaluate, class_balance, macro_f1, compute_class_weights
 from models.gcn import GCN
 from models.mlp import MLP
 from models.graphSage import SAGE
@@ -66,7 +66,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
     #gamma parameter for focusing on hard examples
     #criterion = FocalLoss(alpha=class_weights, gamma=2.0)
     criterion = nn.NLLLoss(weight=class_weights)
-    early_stopper = EarlyStopper(patience=20, min_delta=0.001 )
+    early_stopper = EarlyStopper(patience=200, min_delta=0.001 )
     best_model_state = None
     best_val_metric = -float('inf')
 
@@ -93,7 +93,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
         if epoch % 10 == 0 or epoch == 0:
             print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
 
-        if val_macro_f1 < best_val_metric + 1e-4:
+        if val_macro_f1 > best_val_metric:
             best_val_metric = val_macro_f1
             best_model_state = copy.deepcopy(model.state_dict())
 
@@ -117,9 +117,14 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
         mae, true_prev, pred_prev = classifier_mae(y_pred, y_true)
         print(f"Classifier MAE on test set: {mae:.4f}")
 
+    with torch.no_grad():
+        test_out = model(data.x, data.edge_index)[test_mask]
+        test_probas = torch.exp(test_out)[:, 1]
+        print(f"Min Proba: {test_probas.min():.4f}, Max Proba: {test_probas.max():.4f}")
+        print(f"Average Proba: {test_probas.mean():.4f}")
+
     if config.get('save_model', True):
         save_model(model, config, dataset_name=run_name, split_name=SPLIT_NAME)
-        print(f"Model saved to {config['save_model_path']}")
 
 
     return model
