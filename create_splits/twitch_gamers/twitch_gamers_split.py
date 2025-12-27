@@ -202,6 +202,5 @@ if __name__ == '__main__':
 
     data = load_twitch_gamers(DATASET_CONFIGS[DATASET_NAME])
     features_df = preprocess_twitch_gamers(data)
-    print("dataroot",DATA_ROOT)
     #save_all_splits_json()
-    save_splits_pt()
+    #save_splits_pt()

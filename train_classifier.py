@@ -18,10 +18,10 @@ from utils.early_stopping import EarlyStopper
 MODEL_CONFIG = {
     'name': 'GCN',
     'input_dim': None,
-    'hidden_dim': 128,
+    'hidden_dim': 256,
     'output_dim': 2,
-    'dropout': 0.2,
-    'lr': 0.01,
+    'dropout': 0.3,
+    'lr': 0.001,
     'save_model': True
 }
 
@@ -66,7 +66,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
     #gamma parameter for focusing on hard examples
     #criterion = FocalLoss(alpha=class_weights, gamma=2.0)
     criterion = nn.NLLLoss(weight=class_weights)
-    early_stopper = EarlyStopper(patience=200, min_delta=0.001 )
+    early_stopper = EarlyStopper(patience=10, min_delta=0.001 )
     best_model_state = None
     best_val_metric = -float('inf')
 

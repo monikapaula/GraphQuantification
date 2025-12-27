@@ -5,7 +5,7 @@ import argparse
 import torch
 
 from quapy.data import LabelledCollection
-from quapy.method.aggregative import ACC, PCC, PACC, KDEyCS
+from quapy.method.aggregative import CC,ACC, PCC, PACC, KDEyML
 from quapy.model_selection import GridSearchQ
 from quapy.protocol import APP
 from sklearn.isotonic import IsotonicRegression
@@ -54,14 +54,15 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL):
 
     #Experiments
     val_protocol = APP(val_set, n_prevalences=11, repeats=1, sample_size=len(val_set))
-    param_grid = {'bandwidth': np.logspace(-3,0,15)}
+    param_grid = {'bandwidth': np.linspace(0.05,0.2, 10)}
 
 
     quantifiers = {
+        'CC': CC(wrapper,fit_classifier=False),
         'ACC': ACC(wrapper, fit_classifier=False),
         'PCC': PCC(wrapper, fit_classifier=False),
         'PACC': PACC(wrapper, fit_classifier=False),
-        'KDEy': GridSearchQ(model= KDEyCS(wrapper, fit_classifier=False), param_grid=param_grid,protocol=val_protocol,error='mae', refit=True)
+        'KDEy': GridSearchQ(model= KDEyML(wrapper, fit_classifier=False), param_grid=param_grid,protocol=val_protocol,error='mae', refit=True)
     }
     plot_probability_distribution(wrapper, val_indices, title="Validation Set Probabilities")
     print(f"\nTrue prevalence: {np.round(test_set.prevalence(), 4)}")
