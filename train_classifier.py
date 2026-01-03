@@ -58,6 +58,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
     model = load_model(config).to(device)
     optimizer = optim.Adam(model.parameters(), lr=config['lr'])
     x, edge_index, y = x.to(device), edge_index.to(device), y.to(device)
+    y = y.long()
     train_mask, val_mask, test_mask = train_mask.to(device), val_mask.to(device), test_mask.to(device)
 
     if class_weights is not None:
@@ -66,7 +67,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
     #gamma parameter for focusing on hard examples
     #criterion = FocalLoss(alpha=class_weights, gamma=2.0)
     criterion = nn.NLLLoss(weight=class_weights)
-    early_stopper = EarlyStopper(patience=10, min_delta=0.001 )
+    early_stopper = EarlyStopper(patience=20, min_delta=0.001 )
     best_model_state = None
     best_val_metric = -float('inf')
 

@@ -8,7 +8,6 @@ from quapy.data import LabelledCollection
 from quapy.method.aggregative import CC,ACC, PCC, PACC, KDEyML
 from quapy.model_selection import GridSearchQ
 from quapy.protocol import APP
-from sklearn.isotonic import IsotonicRegression
 
 from utils.data_loader import load_data_object, load_model
 from create_splits.split_manager import load_split
@@ -72,7 +71,9 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL):
         mae = qp.error.mae(test_set.prevalence(), est_prev)
         print(f"{name}: Estimated = {np.round(est_prev, 4)}\tMAE = {mae:.4f}")
 
-    sis_path= f"{BASE_DIR}_{DATASET_NAME}_{SPLIT_NAME}_sis.pt"
+    conf_dir = "confusion_matrix"
+    os.makedirs(conf_dir, exist_ok=True)
+    sis_path= os.path.join(conf_dir, f"{DATASET_NAME}_{SPLIT_NAME}_sis.pt")
     if not os.path.exists(sis_path):
         print(f"Creating Confusion matrix {sis_path}")
         compute_confusion(
@@ -89,10 +90,6 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL):
         print(f"SIS-ACC: Estimated = {np.round(est_prev_sis, 4)}\tMAE = {mae_sis:.4f}")
     except Exception as e:
         print(f"SIS-ACC: Calculation failed ({e})")
-
-    with torch.no_grad():
-        sample_logits = model(data.x, data.edge_index)[:10]
-        print(f"DEBUG - Erste 10 Logits: {sample_logits}")
 
 def parse_args():
     parser = argparse.ArgumentParser()

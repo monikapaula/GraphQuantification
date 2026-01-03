@@ -1,51 +1,56 @@
+
 import torch
 import numpy as np
-import jax
-import jax.numpy as jnp
-import torch.functional as F
 import quapy as qp
 from torch_sparse import SparseTensor
 from torch_geometric.nn import APPNP
 
-def sparse_kronecker_product(*tensors, max_indices):
-    res = tensors[0]
-    for i in range(1, len(tensors)):
-        res = res.unsqueeze(-1) * max_indices[i] + tensors[i]
+def sparse_kronecker_product(*idx_tensors, max_indices):
+    dims = len(idx_tensors)
+    res = idx_tensors[-1].to(torch.int64)
+    factor = 1
+    for i in range(1, dims):
+        factor *= max_indices[-i]
+        res = res + (idx_tensors[-i -1].to(torch.int64) * factor)
     return res
 
 
 def sparse_kronecker_product_sum(*idx_tensors, max_indices, values=None):
-    dims = len(max_indices)
-    device = idx_tensors[0].device
-    idxs = idx_tensors[0].long()
-    for i in range(1, dims):
-        idxs = idxs * max_indices[i] + idx_tensors[i].long()
+    dims = len(idx_tensors)
+    assert dims == len(max_indices)
+    idxs = sparse_kronecker_product(*idx_tensors, max_indices= max_indices)
     max_index_prod = int(np.prod(max_indices))
 
     if values is None:
-        values = torch.ones_like(idxs, dtype=torch.float32)
-    idxs = idxs.view(-1)
-    values = values.view(-1)
+        values = torch.tensor(1, dtype=torch.int64)
+    if values.dim() > idxs.dim():
+        idxs = idxs.expand_as(values)
+    result = torch.zeros(idxs.shape[:-1] + (max_index_prod,), dtype=values.dtype)
+    result.scatter_add_(-1, idxs, values.expand_as(idxs))
 
-    result = torch.zeros(max_index_prod, dtype = values.dtype, device = device)
-    result.scatter_add_(0, idxs, values)
     return result
 
 #ACC
-def hard_multi_cond_prob_estimate(y_trues, y_preds, num_classes, y_true_weights=None):
-    y_true = y_trues[0].long()
-    y_pred = y_preds[0].long()
-    joint_indices = [y_trues[0], y_preds[0]]
-    max_indices = [num_classes, num_classes]
+def hard_multi_cond_prob_estimate(y_trues, y_preds, num_classes, y_true_weights= None, normalize: bool = True):
+    y_true = [t.long() for t in y_trues]
+    y_pred = [t.long() for t in y_preds]
+    max_indices = [num_classes] * (len(y_trues) + len(y_preds))
 
-    flat_counts = sparse_kronecker_product_sum(
-        *joint_indices, max_indices=max_indices, values=y_true_weights).to(dtype=torch.float32)
+    confusion = sparse_kronecker_product_sum(
+        *y_true, *y_pred, max_indices=max_indices, values=y_true_weights).to(dtype=torch.float32)
 
-    conf_matrix = flat_counts.reshape(num_classes, num_classes)
-    row_sums = conf_matrix.sum(dim=-1, keepdim=True)
-    row_sums[row_sums == 0] = 1.0
+    confusion = confusion.view(confusion.shape[:-1] + (num_classes ** len(y_trues), -1))
 
-    return conf_matrix / row_sums
+    if normalize:
+        class_counts = confusion.sum(dim=-1, keepdim=True)
+        row_sums = torch.where(class_counts == 0, torch.ones_like(class_counts), class_counts)
+
+        normalized_confusion = confusion / row_sums
+
+        return normalized_confusion
+
+    return confusion
+
 
 def compute_weights(
         data,
@@ -84,7 +89,7 @@ def compute_confusion(data, val_mask, test_mask, wrapper, num_classes, save_path
         num_classes=num_classes,
         y_true_weights=split_weights,
     )
-    #confusion = confusion.transpose(-1,-2)
+    confusion = confusion.transpose(-1,-2)
     #print("column sums of confusion:", confusion.sum(0))  # after transpose
     #print("Weights sum:", split_weights.sum().item())
     #print("confusion shape:", confusion.shape)
