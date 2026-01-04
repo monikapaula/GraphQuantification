@@ -1,4 +1,4 @@
-# Twitch_gamers 
+# Twitch_social_network
 
 from https://snap.stanford.edu/data/twitch-social-networks.html
 
