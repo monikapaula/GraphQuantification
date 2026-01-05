@@ -7,7 +7,7 @@ import torch
 from quapy.data import LabelledCollection
 from quapy.method.aggregative import CC,ACC, PCC, PACC, KDEyML
 from quapy.model_selection import GridSearchQ
-from quapy.protocol import APP
+from quapy.protocol import APP,UPP
 
 from utils.data_loader import load_data_object, load_model
 from create_splits.split_manager import load_split
@@ -52,7 +52,11 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL):
     test_set = LabelledCollection(test_indices, test_y, classes=classes)
 
     #Experiments
-    val_protocol = APP(val_set, n_prevalences=11, repeats=1, sample_size=len(val_set))
+    if num_classes <= 2:
+        val_protocol = APP(val_set, n_prevalences=11, repeats=10, sample_size=len(val_set))
+    else:
+        val_protocol = UPP(val_set, repeats=20, sample_size=500)
+
     param_grid = {'bandwidth': np.linspace(0.05,0.2, 10)}
 
 

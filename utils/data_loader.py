@@ -54,7 +54,7 @@ def load_data_object(dataset_name: str, base_dir="split_data", split_name: str |
     """
     Loads a saved PyG Data object for a dataset.
     """
-    if dataset_name in ['twitch_gamers', 'presidential_election']:
+    if dataset_name in ['twitch_gamers', 'presidential_election', 'ogbn_arxiv']:
         data_path = DATA_ROOT / base_dir / dataset_name / split_name / f"{split_name}_data.pt"
     else:
         data_path = DATA_ROOT/ f"{base_dir}/{dataset_name}/{dataset_name}_data.pt"

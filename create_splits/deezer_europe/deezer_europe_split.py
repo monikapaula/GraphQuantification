@@ -100,13 +100,14 @@ def get_dataset(split_name):
     return data, train_mask, val_mask, test_mask
 
 if __name__ == "__main__":
-    #save_splits_pt()
+    save_splits_pt()
     features, _, _ = load_data()
     embeddings = svd_embeddings(features, embed_dim=32)
     print(f"Output shape: {embeddings.shape}")
     print(f"Vector user 0: {embeddings[0][:10]}...")
-    data, train_mask, val_mask, test_mask = get_dataset("split_0")
+    data, train_mask, val_mask, test_mask = get_dataset("split_3")
     y = data.y
     class_balance(y, train_mask, "TRAIN")
     class_balance(y, val_mask, "VAL")
     class_balance(y, test_mask, "TEST")
+

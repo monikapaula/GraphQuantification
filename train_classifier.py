@@ -24,7 +24,7 @@ MODEL_CONFIG = {
     'output_dim': None,
     'dropout': 0.3,
     'lr': 0.001,
-    'save_model': True
+    'save_model': False
 }
 
 def load_model(config:dict):
@@ -127,7 +127,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
         print(f"Min Proba: {max_probas.min():.4f}, Max Proba: {max_probas.max():.4f}")
         print(f"Average Proba: {max_probas.mean():.4f}")
 
-    if config.get('save_model', True):
+    if config.get('save_model', False):
         save_model(model, config, dataset_name=run_name, split_name=SPLIT_NAME)
 
 

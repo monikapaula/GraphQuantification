@@ -14,13 +14,9 @@ def flatten_arts (arts):
 def create_popularity_split(features_df, target_df ):
     """
     creates a shift between users based on the popularity of the artists they listen to
-    mainstream artist: top 40% artists by total number of listeners
-    niche artist: bottom 60% artists by total number of listeners
     split_name: split_2
     """
-    top_frac = 0.4
-    val_frac = 0.1
-
+    val_frac = 0.2
     rng = np.random.default_rng(42)
     num_nodes = target_df['id'].max()+1
 
@@ -29,33 +25,37 @@ def create_popularity_split(features_df, target_df ):
         flat_arts = flatten_arts(arts)
         for a in set(flat_arts):
             artist_counts[a] = artist_counts.get(a, 0) + 1
+    sorted_arts = sorted(artist_counts.items(), key=lambda x: x[1], reverse=True)
+    n_unique_arts = len(sorted_arts)
+    top_art_cutoff = int(0.2 * n_unique_arts)
+    mainstream_art_idx = set([a[0] for a in sorted_arts[:top_art_cutoff]])
 
-    mainstream_scores = np.zeros(num_nodes, dtype=np.float32)
+    train_idx = []
+    test_idx = []
 
     for user_id, arts in features_df.items():
         user_id = int(user_id)
         if user_id >= num_nodes:
             continue
-        popular = [artist_counts[a] for a in arts if a in artist_counts]
-        if not popular:
+        if not arts:
+            train_idx.append(user_id)
             continue
-        mainstream_scores[user_id] = np.mean(popular)
 
-    all_users = np.arange(num_nodes)
-    sorted_users = all_users[np.argsort(mainstream_scores[all_users])]
+        m_hits = len([a for a in arts if a in mainstream_art_idx])
+        m_share = m_hits / len(arts)
 
-    n_users = len(sorted_users)
-    cutoff = int ((1.0 - top_frac) * n_users)
+        if m_share >= 0.75:
+            train_idx.append(user_id)
+        else:
+            test_idx.append(user_id)
 
-    niche_users = sorted_users[:cutoff]
-    mainstream_users = sorted_users[cutoff:]
+    mainstream_pool = np.array(train_idx, dtype=int)
+    niche_pool = np.array(test_idx, dtype=int)
+    rng.shuffle(mainstream_pool)
 
-    rng.shuffle(niche_users)
-    rng.shuffle(mainstream_users)
-
-    n_val = int(len(mainstream_users) * val_frac)
-    train_nodes = mainstream_users[n_val:]
-    val_nodes = mainstream_users[:n_val]
-    test_nodes = niche_users
+    n_val = int(len(mainstream_pool) * val_frac)
+    train_nodes = mainstream_pool[n_val:]
+    val_nodes = mainstream_pool[:n_val]
+    test_nodes = niche_pool
 
     return _create_mask(num_nodes, train_nodes, val_nodes, test_nodes)
