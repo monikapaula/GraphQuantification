@@ -7,6 +7,8 @@ import argparse
 from create_splits.presidential_election.presidential_el_split import get_dataset as get_election_dataset
 from create_splits.deezer_europe.deezer_europe_split import get_dataset as get_deezer_dataset
 from create_splits.twitch_gamers.twitch_gamers_split import get_dataset as get_twitch_gamers_dataset
+from create_splits.ogbn_arxiv.ogbn_arxiv_split import get_dataset as get_ogbn_arxiv_dataset
+
 from utils.metrics import classifier_mae, extensive_evaluate, class_balance, macro_f1, compute_class_weights
 from models.gcn import GCN
 from models.mlp import MLP
@@ -19,7 +21,7 @@ MODEL_CONFIG = {
     'name': 'GCN',
     'input_dim': None,
     'hidden_dim': 256,
-    'output_dim': 2,
+    'output_dim': None,
     'dropout': 0.3,
     'lr': 0.001,
     'save_model': True
@@ -120,9 +122,10 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
 
     with torch.no_grad():
         test_out = model(data.x, data.edge_index)[test_mask]
-        test_probas = torch.exp(test_out)[:, 1]
-        print(f"Min Proba: {test_probas.min():.4f}, Max Proba: {test_probas.max():.4f}")
-        print(f"Average Proba: {test_probas.mean():.4f}")
+        test_probas = torch.exp(test_out)
+        max_probas = test_probas.max(dim=1)[0]
+        print(f"Min Proba: {max_probas.min():.4f}, Max Proba: {max_probas.max():.4f}")
+        print(f"Average Proba: {max_probas.mean():.4f}")
 
     if config.get('save_model', True):
         save_model(model, config, dataset_name=run_name, split_name=SPLIT_NAME)
@@ -132,7 +135,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train classifier model')
-    parser.add_argument('--dataset', type=str, choices=['deezer_europe', 'presidential_election', 'twitch_gamers'],
+    parser.add_argument('--dataset', type=str, choices=['deezer_europe', 'presidential_election', 'twitch_gamers', 'ogbn_arxiv'],
                         help='Name of datasets')
     parser.add_argument('--split', type=str)
     parser.add_argument('--model', type=str, choices=['GCN', 'MLP','SAGE'], default='GCN')
@@ -141,8 +144,8 @@ if __name__ == '__main__':
 
     DATASET = args.dataset
     SPLIT_NAME = args.split
-    MODEL_CONFIG['name'] = args.model
-    MODEL_CONFIG['epochs'] = args.epochs
+
+
     print(f"Loading dataset '{DATASET}' with split '{SPLIT_NAME}'")
     if DATASET == 'presidential_election':
         data, train_mask, val_mask, test_mask = get_election_dataset(split_name=SPLIT_NAME)
@@ -150,17 +153,35 @@ if __name__ == '__main__':
         data, train_mask, val_mask, test_mask = get_deezer_dataset(split_name=SPLIT_NAME)
     elif DATASET == 'twitch_gamers':
         data,train_mask,val_mask,test_mask = get_twitch_gamers_dataset(split_name=SPLIT_NAME)
+    elif DATASET == 'ogbn_arxiv':
+        data,train_mask,val_mask,test_mask = get_ogbn_arxiv_dataset(split_name=SPLIT_NAME)
     else:
         raise ValueError(f"Unknown dataset '{DATASET}'")
+
+    MODEL_CONFIG['name'] = args.model
+    MODEL_CONFIG['output_dim'] = int(data.y.max().item()) + 1
+    MODEL_CONFIG['epochs'] = args.epochs
 
     y_train = data.y[train_mask]
     weights = compute_class_weights(y_train)
     run_name = f"{DATASET}_{SPLIT_NAME}"
     y = data.y
 
-    class_balance(y, train_mask, "TRAIN")
-    class_balance(y, val_mask, "VAL")
-    class_balance(y, test_mask, "TEST")
+    #class_balance(y, train_mask, "TRAIN")
+    #class_balance(y, val_mask, "VAL")
+    #class_balance(y, test_mask, "TEST")
+
+    total_nodes = data.num_nodes
+    train_pct = (train_mask.sum().item() / total_nodes) * 100
+    val_pct = (val_mask.sum().item() / total_nodes) * 100
+    test_pct = (test_mask.sum().item() / total_nodes) * 100
+
+    print(f"\n--- Split Distribution for {DATASET} ---")
+    print(f"Total Nodes: {total_nodes}")
+    print(f"Train Size: {train_mask.sum().item():>6} ({train_pct:.2f}%)")
+    print(f"Val Size:   {val_mask.sum().item():>6} ({val_pct:.2f}%)")
+    print(f"Test Size:  {test_mask.sum().item():>6} ({test_pct:.2f}%)")
+    print("-" * 35 + "\n")
 
     train(
         config=MODEL_CONFIG,

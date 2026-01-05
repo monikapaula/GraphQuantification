@@ -4,9 +4,9 @@ import torch
 import warnings
 
 from sklearn.preprocessing import StandardScaler, MultiLabelBinarizer
+from sklearn.feature_extraction.text import TfidfTransformer
 from torch_geometric.data import Data
 from sklearn.decomposition import TruncatedSVD
-from sklearn.feature_extraction.text import TfidfTransformer
 
 from utils.data_loader import load_twitch_gamers, DATASET_CONFIGS, DATA_ROOT
 from utils.mask_creation import _create_mask
@@ -26,12 +26,10 @@ SPLIT_REGISTRY = {
 TRAIN_COUNTRY = 'DE'
 warnings.filterwarnings('ignore', category=UserWarning, module='sklearn')
 
-from sklearn.feature_extraction.text import TfidfTransformer
-
 
 def preprocess_twitch_gamers(df):
     final_features_df = {}
-    svd_components = 128  # Increased from 32 for better signal
+    svd_components = 128
 
     all_games_lists = []
     country_codes = list(df.keys())
@@ -42,7 +40,7 @@ def preprocess_twitch_gamers(df):
         game_lists = [features_df.get(str(u_id), []) for u_id in target_df['new_id']]
         all_games_lists.extend(game_lists)
 
-    mlb = MultiLabelBinarizer(sparse_output=True)  # Use sparse for memory efficiency
+    mlb = MultiLabelBinarizer(sparse_output=True)
     games_binary = mlb.fit_transform(all_games_lists)
 
     tfidf = TfidfTransformer()
@@ -51,7 +49,6 @@ def preprocess_twitch_gamers(df):
     svd = TruncatedSVD(n_components=svd_components, algorithm='arpack', random_state=42)
     svd.fit(games_tfidf)
 
-    # 4. Fit Global Scaler (on ALL countries to prevent distribution shift)
     all_numeric_data = []
     for lang in country_codes:
         temp_df = df[lang]['target_df'][['days', 'views']].copy()
@@ -61,7 +58,6 @@ def preprocess_twitch_gamers(df):
     global_scaler = StandardScaler()
     global_scaler.fit(pd.concat(all_numeric_data))
 
-    # 5. Transform each country
     for lang in country_codes:
         target_df = df[lang]['target_df']
         features_df = df[lang]['features_df']
@@ -76,17 +72,14 @@ def preprocess_twitch_gamers(df):
                                 columns=[f"svd_{i}" for i in range(svd_components)],
                                 index=target_df.index)
 
-        # Process Numeric
         curr_norm_df = target_df[['days', 'views']].copy()
         curr_norm_df['views'] = np.log1p(curr_norm_df['views'])
         scaled_vals = global_scaler.transform(curr_norm_df)
         df_numeric = pd.DataFrame(scaled_vals, columns=['days', 'views'], index=target_df.index)
 
-        # Add Binary Features
         df_numeric['partner'] = target_df['partner'].values.astype(float)
         df_numeric['mature'] = target_df['mature'].values.astype(float)
 
-        # Add Country One-Hot (Helping the model realize it's a different graph)
         for i, code in enumerate(country_codes):
             df_numeric[f'is_{code}'] = 1.0 if lang == code else 0.0
 
@@ -132,21 +125,6 @@ def save_all_splits_json():
         train_mask, val_mask, test_mask = _create_mask(total_nodes, train_indices, val_indices, test_indices)
         save_split(DATASET_NAME, split_name, train_mask, val_mask, test_mask)
 
-
-def check_feature_overlap(features_map, source_country, target_country):
-
-    df_train = features_map[source_country]
-    df_test = features_map[target_country]
-    game_cols = [c for c in df_train.columns if c.startswith('game_')]
-
-    print(f"Total unique games learned from {source_country}: {len(game_cols)}")
-    x_test_games = df_test[game_cols].values
-    total_game_entries = x_test_games.sum()
-    avg_games_per_user = total_game_entries / len(df_test)
-    print(f"Average 'Known Games' per user in {target_country}: {avg_games_per_user:.2f}")
-
-    if avg_games_per_user < 1.0:
-        print("CRITICAL ISSUE: The Target users play almost NONE of the games the Source users played.")
 
 def save_splits_pt():
     data = load_twitch_gamers(DATASET_CONFIGS[DATASET_NAME])

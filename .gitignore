@@ -1,7 +1,6 @@
 _MACOSX/
 ._*
 .DS_Store
-*.csv
 saved_models/
 __pycache__/
 *.pyc

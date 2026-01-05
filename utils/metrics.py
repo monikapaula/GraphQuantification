@@ -47,13 +47,15 @@ def extensive_evaluate(model, x, edge_index, mask, y):
         y_true = y[mask].cpu().numpy()
         y_pred = pred[mask].cpu().numpy()
 
+        unqiue_classes = np.unique(np.concatenate([y_true, y_pred]))
+        target_classes = [f'Class {int(c)}' for c in unqiue_classes]
+
         cm = confusion_matrix(y_true, y_pred)
         print("\n--- Confusion Matrix ---")
-        print(f"[[TN : {cm[0][0]}, FP : {cm[0][1]}]")
-        print(f" [FN : {cm[1][0]}, TP : {cm[1][1]}]]")
+        print(cm)
 
         print("\n--- Classification Report ---")
-        print(classification_report(y_true, y_pred, target_names=['Class 0', 'Class 1'], zero_division=0))
+        print(classification_report(y_true, y_pred, target_names=target_classes, zero_division=0))
 
     marco_f1= macro_f1(model, x, edge_index, mask, y)
     return marco_f1
@@ -84,12 +86,13 @@ def class_balance(y:torch.Tensor, mask,name):
     print("-" *30)
 
 def plot_probability_distribution(wrapper, indices, title="Probability Distribution"):
-    probas = wrapper.predict_proba(indices)[:, 1]
+    confidences = np.max(wrapper.predict_proba(indices), axis=1)
 
-    plt.figure(figsize=(8, 5))
-    plt.hist(probas, bins=50, edgecolor='black', alpha=0.7)
-    plt.title(title)
-    plt.xlabel("Predicted Probability (Class 1)")
-    plt.ylabel("Frequency")
-    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.figure(figsize=(4, 2), dpi=100)
+    plt.hist(confidences, bins=50, edgecolor='black', alpha=0.7)
+    plt.title(title, fontsize=10)
+    plt.xlabel("Confidence", fontsize=9)
+    plt.ylabel("Frequency", fontsize=9)
+    plt.grid(axis='y', linestyle='--', alpha=0.5)
+    plt.tight_layout()
     plt.show()

@@ -2,7 +2,6 @@ import torch
 from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import MultiLabelBinarizer, Normalizer
 from torch_geometric.data import Data
-import torch.nn as nn
 import numpy as np
 
 from utils.data_loader import load_deezer_europe, DATASET_CONFIGS, save_data_obj ,DATA_ROOT
