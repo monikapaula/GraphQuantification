@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import argparse
+import os
+import pandas as pd
 
 from create_splits.presidential_election.presidential_el_split import get_dataset as get_election_dataset
 from create_splits.deezer_europe.deezer_europe_split import get_dataset as get_deezer_dataset
@@ -24,7 +26,7 @@ MODEL_CONFIG = {
     'output_dim': None,
     'dropout': 0.3,
     'lr': 0.001,
-    'save_model': False
+    'save_model': True
 }
 
 def load_model(config:dict):
@@ -93,8 +95,8 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
             train_acc = evaluate(model, x, edge_index, train_mask, y)
             val_macro_f1 = macro_f1(model, x, edge_index, val_mask, y)
 
-        if epoch % 10 == 0 or epoch == 0:
-            print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
+        #if epoch % 10 == 0 or epoch == 0:
+            #print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
 
         if val_macro_f1 > best_val_metric:
             best_val_metric = val_macro_f1
@@ -120,77 +122,90 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
         mae, true_prev, pred_prev = classifier_mae(y_pred, y_true)
         print(f"Classifier MAE on test set: {mae:.4f}")
 
-    with torch.no_grad():
-        test_out = model(data.x, data.edge_index)[test_mask]
-        test_probas = torch.exp(test_out)
-        max_probas = test_probas.max(dim=1)[0]
-        print(f"Min Proba: {max_probas.min():.4f}, Max Proba: {max_probas.max():.4f}")
-        print(f"Average Proba: {max_probas.mean():.4f}")
+    #with torch.no_grad():
+        #test_out = model(data.x, data.edge_index)[test_mask]
+        #test_probas = torch.exp(test_out)
+        #max_probas = test_probas.max(dim=1)[0]
+        #print(f"Min Proba: {max_probas.min():.4f}, Max Proba: {max_probas.max():.4f}")
+        #print(f"Average Proba: {max_probas.mean():.4f}")
 
     if config.get('save_model', False):
         save_model(model, config, dataset_name=run_name, split_name=SPLIT_NAME)
 
 
-    return model
+    return test_acc
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train classifier model')
     parser.add_argument('--dataset', type=str, choices=['deezer_europe', 'presidential_election', 'twitch_gamers', 'ogbn_arxiv'],
                         help='Name of datasets')
-    parser.add_argument('--split', type=str)
-    parser.add_argument('--model', type=str, choices=['GCN', 'MLP','SAGE'], default='GCN')
+    parser.add_argument('--splits', type=str, nargs='+')
+    parser.add_argument('--models', type=str, nargs='+', choices=['GCN', 'MLP','SAGE'])
     parser.add_argument('--epochs', type=int, default=300)
     args = parser.parse_args()
 
-    DATASET = args.dataset
-    SPLIT_NAME = args.split
+    results_table = []
+    output_dir = 'quantification/results'
+    output_file = os.path.join(output_dir, "classification_results.csv")
+
+    for SPLIT_NAME in args.splits:
+        for MODEL_NAME in args.models:
+            DATASET = args.dataset
+            print(f"\n{'=' * 50}")
+            print(f"RUNNING: Dataset={DATASET}, Split={SPLIT_NAME}, Model={MODEL_NAME}")
 
 
-    print(f"Loading dataset '{DATASET}' with split '{SPLIT_NAME}'")
-    if DATASET == 'presidential_election':
-        data, train_mask, val_mask, test_mask = get_election_dataset(split_name=SPLIT_NAME)
-    elif DATASET == 'deezer_europe':
-        data, train_mask, val_mask, test_mask = get_deezer_dataset(split_name=SPLIT_NAME)
-    elif DATASET == 'twitch_gamers':
-        data,train_mask,val_mask,test_mask = get_twitch_gamers_dataset(split_name=SPLIT_NAME)
-    elif DATASET == 'ogbn_arxiv':
-        data,train_mask,val_mask,test_mask = get_ogbn_arxiv_dataset(split_name=SPLIT_NAME)
-    else:
-        raise ValueError(f"Unknown dataset '{DATASET}'")
+            if DATASET == 'presidential_election':
+                data, train_mask, val_mask, test_mask = get_election_dataset(split_name=SPLIT_NAME)
+            elif DATASET == 'deezer_europe':
+                data, train_mask, val_mask, test_mask = get_deezer_dataset(split_name=SPLIT_NAME)
+            elif DATASET == 'twitch_gamers':
+                data,train_mask,val_mask,test_mask = get_twitch_gamers_dataset(split_name=SPLIT_NAME)
+            elif DATASET == 'ogbn_arxiv':
+                data,train_mask,val_mask,test_mask = get_ogbn_arxiv_dataset(split_name=SPLIT_NAME)
+            else:
+                raise ValueError(f"Unknown dataset '{DATASET}'")
 
-    MODEL_CONFIG['name'] = args.model
-    MODEL_CONFIG['output_dim'] = int(data.y.max().item()) + 1
-    MODEL_CONFIG['epochs'] = args.epochs
+            current_config = MODEL_CONFIG.copy()
+            current_config['name'] = MODEL_NAME
+            current_config['output_dim'] = int(data.y.max().item()) + 1
+            current_config['epochs'] = args.epochs
 
-    y_train = data.y[train_mask]
-    weights = compute_class_weights(y_train)
-    run_name = f"{DATASET}_{SPLIT_NAME}"
-    y = data.y
+            y_train = data.y[train_mask]
+            weights = compute_class_weights(y_train)
+            run_name = f"{DATASET}_{SPLIT_NAME}"
 
-    #class_balance(y, train_mask, "TRAIN")
-    #class_balance(y, val_mask, "VAL")
-    #class_balance(y, test_mask, "TEST")
+            macro_f1_score= train(
+                config=current_config,
+                x=data.x,
+                edge_index=data.edge_index,
+                y=data.y,
+                train_mask=train_mask,
+                val_mask=val_mask,
+                test_mask=test_mask,
+                class_weights=weights,
+                dataset_name=run_name
+            )
 
-    total_nodes = data.num_nodes
-    train_pct = (train_mask.sum().item() / total_nodes) * 100
-    val_pct = (val_mask.sum().item() / total_nodes) * 100
-    test_pct = (test_mask.sum().item() / total_nodes) * 100
+            results_table.append([DATASET, SPLIT_NAME, MODEL_NAME, f"{macro_f1_score:.4f}"])
 
-    print(f"\n--- Split Distribution for {DATASET} ---")
-    print(f"Total Nodes: {total_nodes}")
-    print(f"Train Size: {train_mask.sum().item():>6} ({train_pct:.2f}%)")
-    print(f"Val Size:   {val_mask.sum().item():>6} ({val_pct:.2f}%)")
-    print(f"Test Size:  {test_mask.sum().item():>6} ({test_pct:.2f}%)")
-    print("-" * 35 + "\n")
 
-    train(
-        config=MODEL_CONFIG,
-        x = data.x,
-        edge_index = data.edge_index,
-        y = data.y,
-        train_mask = train_mask,
-        val_mask = val_mask,
-        test_mask = test_mask,
-        class_weights = weights,
-        dataset_name = run_name
-    )
+    headers = ["Dataset", "Split", "Model", "Macro F1"]
+    df = pd.DataFrame(results_table, columns=headers)
+    file_exists = os.path.isfile(output_file)
+    df.to_csv(output_file, mode='a', index=False, header=not file_exists)
+            #class_balance(y, train_mask, "TRAIN")
+            #class_balance(y, val_mask, "VAL")
+            #class_balance(y, test_mask, "TEST")
+
+            #total_nodes = data.num_nodes
+            #train_pct = (train_mask.sum().item() / total_nodes) * 100
+            #val_pct = (val_mask.sum().item() / total_nodes) * 100
+            #test_pct = (test_mask.sum().item() / total_nodes) * 100
+
+    #print(f"\n--- Split Distribution ---")
+    #print(f"Total Nodes: {total_nodes}")
+    #print(f"Train Size: {train_mask.sum().item():>6} ({train_pct:.2f}%)")
+    #print(f"Val Size:   {val_mask.sum().item():>6} ({val_pct:.2f}%)")
+    #print(f"Test Size:  {test_mask.sum().item():>6} ({test_pct:.2f}%)")
+    #print("-" * 35 + "\n")
