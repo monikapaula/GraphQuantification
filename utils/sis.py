@@ -1,9 +1,24 @@
-
 import torch
+import torch_scatter
 import numpy as np
 import quapy as qp
 from torch_sparse import SparseTensor
 from torch_geometric.nn import APPNP
+
+def kronecker_product(*tensors):
+    if len(tensors) == 1:
+        return tensors[0]
+
+    tensor_count = len(tensors)
+    eq_in = []
+    out = "..."
+    for i in range(tensor_count):
+        letter = chr(97 + i)
+        eq_in.append(f"...{letter}")
+        out += letter
+    equation = ",".join(eq_in) + "->" + out
+    result = torch.einsum(equation, *tensors)
+    return result.reshape(result.shape[:-tensor_count] + (-1,))
 
 def sparse_kronecker_product(*idx_tensors, max_indices):
     dims = len(idx_tensors)
@@ -51,6 +66,26 @@ def hard_multi_cond_prob_estimate(y_trues, y_preds, num_classes, y_true_weights=
 
     return confusion
 
+#PACC
+def soft_multi_prob_cond_prob_estimate(y_trues, y_preds_soft, num_classes, y_true_weights=None, normalize=True, EPS: float = 1e-6):
+    y_true = y_trues[0].long()
+    y_pred_soft = y_preds_soft[0]
+
+    if y_true_weights is not None:
+        y_pred_soft= y_pred_soft * y_true_weights.unsqueeze(-1)
+
+    confusion = torch.zeros(num_classes, y_pred_soft.shape[-1], device=y_pred_soft.device)
+    torch_scatter.scatter_add(y_pred_soft, y_true, dim=0, out=confusion)
+
+    if normalize:
+        class_counts = confusion.sum(dim=-1, keepdim=True)
+        confusion = confusion / torch.where(class_counts < EPS, torch.ones_like(class_counts), class_counts)
+
+    return confusion
+
+def soft_multi_prob_estimate(*y_preds):
+    joint_pred_dists = kronecker_product(*y_preds)
+    return joint_pred_dists.mean(dim=-2)
 
 def compute_weights(
         data,
@@ -70,41 +105,43 @@ def compute_weights(
     sis_weights = weights[val_mask][:, test_mask].sum(dim=-1) #1297
     return sis_weights
 
-def compute_confusion(data, val_mask, test_mask, wrapper, num_classes, save_path):
-    #print("val_mask sum:", val_mask.sum().item())
-    #print("test_mask sum:", test_mask.sum().item())
-
+def compute_confusion(data, val_mask, test_mask, wrapper, num_classes, save_path, mode):
     split_weights = compute_weights(data, val_mask, test_mask, num_classes)
     y_val = data.y[val_mask]
     y_val_pred_probs = torch.tensor(wrapper.predict_proba(val_mask), device=y_val.device)
-    y_hat_val = y_val_pred_probs.argmax(dim=-1)
+    if mode == 'acc':
+        y_hat_val = y_val_pred_probs.argmax(dim=-1)
+        confusion = hard_multi_cond_prob_estimate(
+            y_trues=[y_val],
+            y_preds = [y_hat_val],
+            num_classes=num_classes,
+            y_true_weights=split_weights,
+        )
+    else:
+        confusion = soft_multi_prob_cond_prob_estimate(
+            y_trues=[y_val],
+            y_preds_soft=[y_val_pred_probs],
+            num_classes=num_classes,
+            y_true_weights=split_weights,
+        )
 
-    #print("split_weights shape:", split_weights.shape)
-    #print("y_val shape:", y_val.shape)
-    #print("y_hat_val shape:", y_hat_val.shape)
-
-    confusion = hard_multi_cond_prob_estimate(
-        y_trues=[y_val],
-        y_preds = [y_hat_val],
-        num_classes=num_classes,
-        y_true_weights=split_weights,
-    )
     confusion = confusion.transpose(-1,-2)
-    #print("column sums of confusion:", confusion.sum(0))  # after transpose
-    #print("Weights sum:", split_weights.sum().item())
-    #print("confusion shape:", confusion.shape)
-    #print("row sums:", confusion.sum(-1))
+
     torch.save({
-        'sis_confusion_matrix': confusion.cpu()
+        'sis_confusion_matrix': confusion.cpu(), 'mode':mode
     }, save_path)
 
 def quantification_ppr(save_path, wrapper, test_mask):
     load_conf = torch.load(save_path, weights_only=False)
     confusion = load_conf['sis_confusion_matrix'].numpy()
+    mode = load_conf.get('mode', 'pacc')
     num_classes = confusion.shape[0]
     y_test_pred_probs = wrapper.predict_proba(test_mask)
-    y_hat_test = np.argmax(y_test_pred_probs, axis=1)
-    test_cc = np.bincount(y_hat_test, minlength=num_classes)/ len(y_hat_test)
+    if mode == 'acc':
+        y_hat_test = np.argmax(y_test_pred_probs, axis=1)
+        test_cc = np.bincount(y_hat_test, minlength=num_classes)/ len(y_hat_test)
+    else:
+        test_cc = soft_multi_prob_estimate(torch.tensor(y_test_pred_probs)).numpy()
 
     adjusted_quant =qp.functional.solve_adjustment(
         class_conditional_rates= confusion,
@@ -112,6 +149,7 @@ def quantification_ppr(save_path, wrapper, test_mask):
         method='inversion',
         solver= 'minimize'
     )
+    print('quantification_ppr: mode', mode, 'test_cc', test_cc, 'adjusted_quant', adjusted_quant)
     return adjusted_quant
 
 

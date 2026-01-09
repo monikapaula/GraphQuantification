@@ -68,8 +68,6 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
     if class_weights is not None:
         class_weights = class_weights.to(device)
 
-    #gamma parameter for focusing on hard examples
-    #criterion = FocalLoss(alpha=class_weights, gamma=2.0)
     criterion = nn.NLLLoss(weight=class_weights)
     early_stopper = EarlyStopper(patience=20, min_delta=0.001 )
     best_model_state = None
@@ -95,14 +93,12 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
             train_acc = evaluate(model, x, edge_index, train_mask, y)
             val_macro_f1 = macro_f1(model, x, edge_index, val_mask, y)
 
-        #if epoch % 10 == 0 or epoch == 0:
+        #if epoch % 100 == 0 or epoch == 0:
             #print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
 
         if val_macro_f1 > best_val_metric:
             best_val_metric = val_macro_f1
             best_model_state = copy.deepcopy(model.state_dict())
-
-        #Early Stopping
         if early_stopper.early_stop(val_loss):
             break
 
@@ -121,13 +117,6 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
 
         mae, true_prev, pred_prev = classifier_mae(y_pred, y_true)
         print(f"Classifier MAE on test set: {mae:.4f}")
-
-    #with torch.no_grad():
-        #test_out = model(data.x, data.edge_index)[test_mask]
-        #test_probas = torch.exp(test_out)
-        #max_probas = test_probas.max(dim=1)[0]
-        #print(f"Min Proba: {max_probas.min():.4f}, Max Proba: {max_probas.max():.4f}")
-        #print(f"Average Proba: {max_probas.mean():.4f}")
 
     if config.get('save_model', False):
         save_model(model, config, dataset_name=run_name, split_name=SPLIT_NAME)

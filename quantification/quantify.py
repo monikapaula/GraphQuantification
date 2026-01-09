@@ -3,6 +3,7 @@ import numpy as np
 import quapy as qp
 import argparse
 import pandas as pd
+import torch
 
 from quapy.data import LabelledCollection
 from quapy.method.aggregative import CC,ACC, PCC, PACC, KDEyML
@@ -85,26 +86,32 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
     if run_sis:
         conf_dir = "confusion_matrix"
         os.makedirs(conf_dir, exist_ok=True)
-        sis_path= os.path.join(conf_dir, f"{DATASET_NAME}_{SPLIT_NAME}_sis.pt")
-        if not os.path.exists(sis_path):
-            print(f"Creating Confusion matrix {sis_path}")
-            compute_confusion(
-                data=data,
-                val_mask=val_mask,
-                test_mask=test_mask,
-                wrapper=wrapper,
-                num_classes=num_classes,
-                save_path=sis_path
-            )
-        try:
-            est_prev_sis = quantification_ppr(sis_path, wrapper, test_mask)
-            mae_sis = qp.error.mae(test_set.prevalence(), est_prev_sis)
-            run_results.append({
-                'Dataset': DATASET_NAME, 'Split': SPLIT_NAME, 'Classifier': CLASSIFIER_MODEL,
-                'Method': 'SIS-ACC', 'MAE': mae_sis})
-            print()
-        except Exception as e:
-            print(f"SIS-ACC failed {e}")
+        for mode in ['acc', 'pacc']:
+            name = f"SIS-{mode.upper()}"
+            sis_path= os.path.join(conf_dir, f"{DATASET_NAME}_{SPLIT_NAME}_sis_{mode}.pt")
+            if not os.path.exists(sis_path):
+                print(f"Creating Confusion matrix {sis_path}")
+                compute_confusion(
+                    data=data,
+                    val_mask=val_mask,
+                    test_mask=test_mask,
+                    wrapper=wrapper,
+                    num_classes=num_classes,
+                    save_path=sis_path,
+                    mode=mode
+                )
+            try:
+                est_prev_sis = quantification_ppr(sis_path, wrapper, test_mask)
+                mae_sis = qp.error.mae(test_set.prevalence(), est_prev_sis)
+                run_results.append({
+                    'Dataset': DATASET_NAME,
+                    'Split': SPLIT_NAME,
+                    'Classifier': CLASSIFIER_MODEL,
+                    'Method': name,
+                    'MAE': mae_sis})
+
+            except Exception as e:
+                print(f"SIS-ACC failed {e}")
 
     return run_results
 
