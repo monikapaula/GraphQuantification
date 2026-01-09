@@ -1,44 +1,73 @@
 # Deezer_europe splits 
 
-class balance between genders relatively equally distributed 
+The Deezer Europe dataset consists of 28,281 users with a base gender distribution of:
+- Class 0 (Female): 15743
+- Class 1 (male): 12538
 
-0: female = 15743
+## 1. Gender-Biased Splits (Artist Preference): 
 
-1: male = 12538
-
-## split_0: 
+### split_0:
 The model is trained primarily on users who listen to female-dominated artists (Class 1).
-The model is evaluated primarily on users who listen to male-dominated artists (Class 0).
-
-### Class Balance Statistics
+The model is evaluated primarily on users who listen to male-dominated artists (Class 0). The split does not include featureless nodes (users without artist history) into the training set.
 
 | Dataset Split | Total Samples | Class 0 (Count / %) | Class 1 (Count / %) |
 | :--- | :--- | :--- | :--- |
-| **TRAIN** | 1,766 | 234 (13.25%) | **1,532 (86.75%)** |
-| **VAL** | 196 | 26 (13.27%) | **170 (86.73%)** |
-| **TEST** | 7,661 | **5,861 (76.50%)** | 1,800 (23.50%) |
+| **TRAIN** | 8,174 | 2,802 (34.28%) | 5,372 (65.72%) |
+| **VAL** | 2,043 | 653 (31.96%) | 1,390 (68.04%) |
+| **TEST** | 11,882 | 8,813 (74.17%) | 3,069 (25.83%) |
 
 
-## split_1:
+### split_1:
 The model is trained primarily on users who listen to male-dominated artists (Class 0).
-The model is evaluated primarily on users who listen to female-dominated artists (Class 1).
-
-### Class Balance Statistics
+The model is evaluated primarily on users who listen to female-dominated artists (Class 1). The split does not include featureless nodes (users without artist history) into the training set.
 
 | Dataset Split | Total Samples | Class 0 (Count / %) | Class 1 (Count / %) |
 | :--- | :--- | :--- | :--- |
-| **TRAIN** | 6,895 | 5,275 (76.50%) | 1,620 (23.50%) |
-| **VAL** | 766 | 586 (76.50%) | 180 (23.50%) |
-| **TEST** | 1,962 | 260 (13.25%) | **1,702 (86.75%)** |
+| **TRAIN** | 14,606 | 9,110 (62.37%) | 5,496 (37.63%) |
+| **VAL** | 3,651 | 2,267 (62.09%) | 1,384 (37.91%) |
+| **TEST** | 3,842 | 891 (23.19%) | 2,951 (76.81%) |
 
 
-## split_2:
-I split the users based on the overall popularity of the artists they listen to. This separates the data into distinct groups, such as 'mainstream' listeners versus those who prefer niche or less famous music. The proportion of genders in train and test is roughly balance, however we notice a small distribution shift between male and female users.
+## 2. Behavioral & Popularity Splits
 
-### Class Balance Statistics
+### split_2:
+I split the users based on the overall popularity of the artists they listen to. This separates the data into distinct groups, such as 'mainstream' listeners versus those who prefer niche or less famous music. The split does not include featureless nodes (users without artist history) into the training set.
 
 | Dataset Split | Total Samples | Class 0 (Count / %) | Class 1 (Count / %) |
 | :--- | :--- | :--- | :--- |
-| **TRAIN** | 10,182 | 5,203 (51.10%) | 4,979 (48.90%) |
-| **VAL** | 1,131 | 572 (50.57%) | 559 (49.43%) |
-| **TEST** | 16,968 | **9,968 (58.75%)** | 7,000 (41.25%) |
+| **TRAIN** | 13,674 | 7,220 (52.80%) | 6,454 (47.20%) |
+| **VAL** | 3,418 | 1,744 (51.02%) | 1,674 (48.98%) |
+| **TEST** | 5,030 | 3,319 (65.98%) | 1,711 (34.02%) |
+
+## 3. Noisy Splits (Includes Featureless Nodes)
+
+### split_3: 
+Same as split_0 but includes featureless nodes. 
+
+| Dataset Split | Total Samples | Class 0 (Count / %) | Class 1 (Count / %) |
+| :--- | :--- | :--- | :--- |
+| **TRAIN** | 13,120 | 5,550 (42.30%) | 7,570 (57.70%) |
+| **VAL** | 3,279 | 1,380 (42.09%) | 1,899 (57.91%) |
+| **TEST** | 11,882 | 8,813 (74.17%) | 3,069 (25.83%) |
+
+
+### split_4: 
+Same as split_1 but includes featureless nodes.
+
+| Dataset Split | Total Samples | Class 0 (Count / %) | Class 1 (Count / %) |
+| :--- | :--- | :--- | :--- |
+| **TRAIN** | 19,552 | 11,893 (60.83%) | 7,659 (39.17%) |
+| **VAL** | 4,887 | 2,959 (60.55%) | 1,928 (39.45%) |
+| **TEST** | 3,842 | 891 (23.19%) | 2,951 (76.81%) |
+
+### split_5: 
+Same as spit_3 but includes featureless nodes. 
+
+| Dataset Split | Total Samples | Class 0 (Count / %) | Class 1 (Count / %) |
+| :--- | :--- | :--- | :--- |
+| **TRAIN** | 18,601 | 9,959 (53.54%) | 8,642 (46.46%) |
+| **VAL** | 4,650 | 2,465 (53.01%) | 2,185 (46.99%) |
+| **TEST** | 5,030 | 3,319 (65.98%) | 1,711 (34.02%) |
+
+Data Source: Deezer Europe Dataset. Provided by the Stanford Network Analysis Project (SNAP). Originally introduced in: Multi-scale Attributed Node Embedding (Rozemberczki et al., 2019). 
+Available at: (https://snap.stanford.edu/data/feather-deezer-social.html)
