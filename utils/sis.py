@@ -103,6 +103,8 @@ def compute_weights(
     weights = propagate(identity, adj_t)
 
     sis_weights = weights[val_mask][:, test_mask].sum(dim=-1) #1297
+    sis_weights = sis_weights + 0.01
+
     return sis_weights
 
 def compute_confusion(data, val_mask, test_mask, wrapper, num_classes, save_path, mode):
