@@ -18,9 +18,9 @@ SPLIT_REGISTRY = {
     'split_0': {'type': 'male_dominated', 'featureless': False},
     'split_1': {'type': 'female_dominated', 'featureless': False},
     'split_2': {'type': 'popular_artists', 'featureless': False},
-    'split_3': {'type': 'user_activity', 'featureless': False},
-    'split_4': {'type': 'male_dominated', 'featureless': True},
-    'split_5': {'type': 'female_dominated', 'featureless': True}
+    'split_3': {'type': 'male_dominated', 'featureless': True},
+    'split_4': {'type': 'female_dominated', 'featureless': True},
+    'split_5': {'type': 'popular_artists', 'featureless': True}
 }
 
 def load_data():
@@ -81,13 +81,12 @@ def save_splits_pt():
         'male_dominated': male_gender_split,
         'female_dominated': female_gender_split,
         'popular_artists': create_popularity_split,
-        'user_activity': create_user_activity_split
     }
 
     for split_name, config in SPLIT_REGISTRY.items():
         split_func = func_map[config['type']]
 
-        if config['type'] in ['male_dominated', 'female_dominated']:
+        if config['type'] in ['male_dominated', 'female_dominated', 'popular_artists']:
             masks= split_func(features_df, target_df, include_featureless_nodes=config['featureless'])
         else:
             masks = split_func(features_df, target_df)

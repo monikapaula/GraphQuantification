@@ -11,7 +11,7 @@ def flatten_arts (arts):
             flat.append(a)
     return flat
 
-def create_popularity_split(features_df, target_df ):
+def create_popularity_split(features_df, target_df, include_featureless_nodes=False):
     """
     creates a shift between users based on the popularity of the artists they listen to
     split_name: split_2
@@ -32,13 +32,17 @@ def create_popularity_split(features_df, target_df ):
 
     train_idx = []
     test_idx = []
+    dropped_count = 0
 
     for user_id, arts in features_df.items():
         user_id = int(user_id)
         if user_id >= num_nodes:
             continue
         if not arts:
-            train_idx.append(user_id)
+            if include_featureless_nodes:
+                train_idx.append(user_id)
+            else:
+                dropped_count += 1
             continue
 
         m_hits = len([a for a in arts if a in mainstream_art_idx])
