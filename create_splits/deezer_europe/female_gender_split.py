@@ -36,7 +36,7 @@ def categorize_by_maj(stats):
     mostly_female = s[s['male_share'] >= majority]['artist_id'].tolist()
     return mostly_male, mostly_female
 
-def female_gender_split(features_df, target_df):
+def female_gender_split(features_df, target_df, include_featureless_nodes:False):
     """
     creates a shift between male and female users based on the
     artistes they listen to
@@ -55,22 +55,29 @@ def female_gender_split(features_df, target_df):
 
     train_idx = []
     test_idx = []
+    dropped_count = 0
 
     for uid_str, arts in features_df.items():
         u = int(uid_str)
-        if u >= num_nodes:
-            continue
         if not arts:
-            train_idx.append(u)
+            if include_featureless_nodes:
+                train_idx.append(u)
+            else:
+                dropped_count += 1
+                continue
             continue
+
         aset = set(arts)
         m_cnt = len(aset & male_art_set)
         f_cnt = len(aset & female_art_set)
         total = m_cnt + f_cnt
-        if total == 0:
-            train_idx.append(u)
-            continue
 
+        if total == 0:
+            if include_featureless_nodes:
+                train_idx.append(u)
+            else:
+                dropped_count += 1
+            continue
         f_share = f_cnt / total
 
         if f_share >= 0.65:

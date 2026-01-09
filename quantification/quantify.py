@@ -47,13 +47,13 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
 
     val_set = LabelledCollection(val_indices, val_y, classes=classes)
     test_set = LabelledCollection(test_indices, test_y, classes=classes)
-    param_grid = {'bandwidth': np.linspace(0.05,0.2, 10)}
+    param_grid = {'bandwidth': [0.1,0.15,0.2]}
 
     #Experiments
     if num_classes <= 2:
         val_protocol = APP(val_set, n_prevalences=11, repeats=10, sample_size=len(val_set))
     else:
-        val_protocol = UPP(val_set, repeats=20, sample_size=500)
+        val_protocol = UPP(val_set, repeats=20, sample_size=100)
 
     quantifiers = {
         'CC': CC(wrapper,fit_classifier=False),
@@ -66,13 +66,13 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
     true_prev = test_set.prevalence()
 
     #plot_probability_distribution(wrapper, val_indices, title="Validation Set Probabilities")
-    #print(f"\nTrue prevalence: {np.round(test_set.prevalence(), 4)}")
+    print(f"\nTrue prevalence: {np.round(test_set.prevalence(), 4)}")
 
     for name, quantifier in quantifiers.items():
         quantifier.fit(val_set.instances, val_set.labels)
         est_prev = quantifier.quantify(test_set.instances)
         mae = qp.error.mae(test_set.prevalence(), est_prev)
-        #print(f"{name}: Estimated = {np.round(est_prev, 4)}\tMAE = {mae:.4f}")
+        print(f"{name}: Estimated = {np.round(est_prev, 4)}\tMAE = {mae:.4f}")
 
         run_results.append({
             'Dataset': DATASET_NAME,
@@ -102,6 +102,7 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
             run_results.append({
                 'Dataset': DATASET_NAME, 'Split': SPLIT_NAME, 'Classifier': CLASSIFIER_MODEL,
                 'Method': 'SIS-ACC', 'MAE': mae_sis})
+            print()
         except Exception as e:
             print(f"SIS-ACC failed {e}")
 

@@ -15,10 +15,12 @@ from utils.metrics import class_balance
 DATASET_NAME = 'deezer_europe'
 CONFIG = DATASET_CONFIGS[DATASET_NAME]
 SPLIT_REGISTRY = {
-    'split_0': 'male_dominated',
-    'split_1': 'female_dominated',
-    'split_2': 'popular_artists',
-    'split_3': 'user_activity'
+    'split_0': {'type': 'male_dominated', 'featureless': False},
+    'split_1': {'type': 'female_dominated', 'featureless': False},
+    'split_2': {'type': 'popular_artists', 'featureless': False},
+    'split_3': {'type': 'user_activity', 'featureless': False},
+    'split_4': {'type': 'male_dominated', 'featureless': True},
+    'split_5': {'type': 'female_dominated', 'featureless': True}
 }
 
 def load_data():
@@ -26,7 +28,7 @@ def load_data():
     features_df, edges_df, target_df = load_deezer_europe(cfg)
     return features_df, edges_df, target_df
 
-def svd_embeddings(features_df, embed_dim=32):
+def svd_embeddings(features_df, embed_dim=256):
     """
     creates user embeddings using TruncatedSVD
     """
@@ -53,15 +55,17 @@ def svd_embeddings(features_df, embed_dim=32):
     scaler = Normalizer(norm='l2')
     X_emb = scaler.fit_transform(X_emb)
 
-    X_embeddings = np.zeros((num_users, embed_dim), dtype=np.float32)
-    X_embeddings[valid_indices] = X_emb.astype(np.float32)
+    X_embeddings = np.zeros((num_users, embed_dim + 1), dtype=np.float32)
+    X_embeddings[valid_indices, :embed_dim] = X_emb
+    X_embeddings[valid_indices, -1] = 1.0
+    print(f"SVD Variane: {svd.explained_variance_ratio_.sum()}")
 
     return X_embeddings
 
 def save_splits_pt():
     features_df, edges_df, target_df = load_data()
 
-    X_np = svd_embeddings(features_df, embed_dim=32)
+    X_np = svd_embeddings(features_df, embed_dim=256)
     X_tensor = torch.from_numpy(X_np).float()
 
     Y_np = target_df.sort_values('id')['target'].values
@@ -73,18 +77,22 @@ def save_splits_pt():
     data = Data(x=X_tensor, edge_index=edge_index, y=Y_tensor)
     save_data_obj(data, DATASET_NAME)
 
-    for split_name, split_type in SPLIT_REGISTRY.items():
-        if split_type == "male_dominated":
-             masks = male_gender_split(features_df, target_df)
-        elif split_type == "female_dominated":
-            masks = female_gender_split(features_df, target_df)
-        elif split_type == "popular_artists":
-            masks = create_popularity_split(features_df, target_df)
-        elif split_type == "user_activity":
-            masks = create_user_activity_split(features_df, target_df)
+    func_map = {
+        'male_dominated': male_gender_split,
+        'female_dominated': female_gender_split,
+        'popular_artists': create_popularity_split,
+        'user_activity': create_user_activity_split
+    }
+
+    for split_name, config in SPLIT_REGISTRY.items():
+        split_func = func_map[config['type']]
+
+        if config['type'] in ['male_dominated', 'female_dominated']:
+            masks= split_func(features_df, target_df, include_featureless_nodes=config['featureless'])
+        else:
+            masks = split_func(features_df, target_df)
 
         train_mask,val_mask,test_mask = masks
-
         save_split(DATASET_NAME, split_name, train_mask, val_mask, test_mask)
 
 def get_dataset(split_name):
@@ -102,10 +110,8 @@ def get_dataset(split_name):
 if __name__ == "__main__":
     save_splits_pt()
     features, _, _ = load_data()
-    embeddings = svd_embeddings(features, embed_dim=32)
-    print(f"Output shape: {embeddings.shape}")
-    print(f"Vector user 0: {embeddings[0][:10]}...")
-    data, train_mask, val_mask, test_mask = get_dataset("split_3")
+    embeddings = svd_embeddings(features, embed_dim=256)
+    data, train_mask, val_mask, test_mask = get_dataset("split_0")
     y = data.y
     class_balance(y, train_mask, "TRAIN")
     class_balance(y, val_mask, "VAL")

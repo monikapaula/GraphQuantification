@@ -186,6 +186,15 @@ if __name__ == '__main__':
                 class_weights=weights,
                 dataset_name=run_name
             )
+            y = data.y
+            class_balance(y, train_mask, "TRAIN")
+            class_balance(y, val_mask, "VAL")
+            class_balance(y, test_mask, "TEST")
+
+            total_nodes = data.num_nodes
+            train_pct = (train_mask.sum().item() / total_nodes) * 100
+            val_pct = (val_mask.sum().item() / total_nodes) * 100
+            test_pct = (test_mask.sum().item() / total_nodes) * 100
 
             results_table.append([DATASET, SPLIT_NAME, MODEL_NAME, f"{macro_f1_score:.4f}"])
 
@@ -194,14 +203,7 @@ if __name__ == '__main__':
     df = pd.DataFrame(results_table, columns=headers)
     file_exists = os.path.isfile(output_file)
     df.to_csv(output_file, mode='a', index=False, header=not file_exists)
-            #class_balance(y, train_mask, "TRAIN")
-            #class_balance(y, val_mask, "VAL")
-            #class_balance(y, test_mask, "TEST")
 
-            #total_nodes = data.num_nodes
-            #train_pct = (train_mask.sum().item() / total_nodes) * 100
-            #val_pct = (val_mask.sum().item() / total_nodes) * 100
-            #test_pct = (test_mask.sum().item() / total_nodes) * 100
 
     #print(f"\n--- Split Distribution ---")
     #print(f"Total Nodes: {total_nodes}")
