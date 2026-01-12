@@ -4,3 +4,9 @@ _MACOSX/
 saved_models/
 __pycache__/
 *.pyc
+data/*
+!data/presidential_election/
+quantification/results/
+quantification/confusion_matrix/
+*.csv.gz
+RELEASE_v1.txt
