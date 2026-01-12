@@ -1,8 +1,6 @@
 # Twitch_social_network
 
-from https://snap.stanford.edu/data/twitch-social-networks.html
-
-Quantification task: quantifiy the number of mature and nonmature users
+Quantification task: quantifiy the number of mature and non-mature users
 
 ## split_0:
 Model is trained on Germany and tested on England. 
@@ -51,3 +49,4 @@ Model is trained on Germany and tested on Russia.
 | **TEST** | 4,385 | 3,310 (75.48%) | 1,075 (24.52%) |
 
 
+Data Source: Twitch_gamers Dataset. Provided by the Stanford Network Analysis Project (SNAP). Originally introduced in: Multi-scale Attributed Node Embedding (Rozemberczki et al., 2019). Available at: (https://snap.stanford.edu/data/twitch-social-networks.html).
