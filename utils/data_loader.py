@@ -130,8 +130,8 @@ def load_deezer_europe(cfg):
 
     return features_data, edges_df, target_df
 
-def load_twitch_gamers(cfg):
-    extract_dir = cfg['extract_dir']
+def load_twitch_gamers(DATA_ROOT):
+    extract_dir = DATA_ROOT / 'data'
     SOURCE_LANG = 'DE'
     TARGET_LANG = ['ENGB', 'ES', 'FR', 'PTBR', 'RU']
     ALL_LANG = [SOURCE_LANG] + TARGET_LANG
@@ -153,6 +153,3 @@ def load_twitch_gamers(cfg):
         }
 
     return all_datasets
-
-if __name__ == '__main__':
-    print(DATA_ROOT)
