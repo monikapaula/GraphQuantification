@@ -1,7 +1,7 @@
 import numpy as np
 from utils.mask_creation import _create_mask
 
-def create_coast_split(features_df, y_np ):
+def create_coast_split(features_df):
     """
     creates a shift between interior states (republican) and coastal states (democratic)
     split_name: split_2

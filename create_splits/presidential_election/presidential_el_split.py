@@ -19,7 +19,7 @@ SPLIT_REGISTRY= {
     'split_3': 'metropolitan'
 }
 
-TRAIN_RATIO = 0.6
+TRAIN_RATIO = 0.5
 VALIDATION_RATIO = 0.1
 TEST_RATIO = 1.0 - TRAIN_RATIO - VALIDATION_RATIO
 
@@ -95,13 +95,13 @@ def save_splits_pt():
         current_cols = NORM_COLS.copy()
 
         if split_type == 'geographic':
-            train_mask, val_mask, test_mask = create_geographic_split(features_df, VALIDATION_RATIO)
+            train_mask, val_mask, test_mask = manage_splits(split_name, num_nodes, lambda : create_geographic_split(features_df, VALIDATION_RATIO))
         elif split_type == 'random':
-            train_mask, val_mask, test_mask = create_random_split(num_nodes, TRAIN_RATIO, VALIDATION_RATIO)
+            train_mask, val_mask, test_mask = manage_splits(split_name, num_nodes, lambda : create_random_split(features_df, TEST_RATIO, VALIDATION_RATIO))
         elif split_type == 'coast':
-            train_mask, val_mask, test_mask = create_coast_split(features_df, TEST_RATIO)
+            train_mask, val_mask, test_mask = manage_splits(split_name, num_nodes, lambda : create_coast_split(features_df))
         elif split_type == 'metropolitan':
-            train_mask, val_mask, test_mask = create_metro_split(features_df)
+            train_mask, val_mask, test_mask = manage_splits(split_name, num_nodes, lambda : create_metro_split(features_df))
             for col in METRO_DROP_COLS:
                 if col in current_cols:
                     current_cols.remove(col)
@@ -136,7 +136,7 @@ def get_dataset(split_name):
 
 if __name__ == '__main__':
     save_splits_pt()
-    data, train_mask, val_mask, test_mask = get_dataset(split_name='split_3')
+    data, train_mask, val_mask, test_mask = get_dataset(split_name='split_0')
     print("size training:", train_mask.sum())
     print("size val:", val_mask.sum())
     print("size test:", test_mask.sum())
