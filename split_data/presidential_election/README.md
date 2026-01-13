@@ -14,10 +14,10 @@ The dataset is highly imbalanced:
 Simulates a standard election with scattered missing results
 
 | Dataset Split | Total Samples | Class 0 (Democrat) | Class 1 (Republican) |
-| :--- | :--- | :--- | :--- |
-| **TRAIN** | 1,884 | 334 (17.73%) | 1,550 (82.27%) |
-| **VAL** | 314 | 54 (17.20%) | 260 (82.80%) |
-| **TEST** | 943 | 165 (17.50%) | 778 (82.50%) |
+| :--- |:--------------|:-------------------|:---------------------|
+| **TRAIN** | 1,256         | 126 (10.03%)       | 1,130 (89.97%)       |
+| **VAL** | 314           | 41 (13.06%)        | 273 (86.94%)         |
+| **TEST** | 1,571         | 386 (24.57%)       | 1,185 (75.43%)       |
 
 
 ## split_1: geographical 
