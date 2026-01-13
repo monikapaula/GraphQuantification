@@ -15,9 +15,9 @@ Simulates a standard election with scattered missing results
 
 | Dataset Split | Total Samples | Class 0 (Democrat) | Class 1 (Republican) |
 | :--- |:--------------|:-------------------|:---------------------|
-| **TRAIN** | 1,256         | 126 (10.03%)       | 1,130 (89.97%)       |
-| **VAL** | 314           | 41 (13.06%)        | 273 (86.94%)         |
-| **TEST** | 1,571         | 386 (24.57%)       | 1,185 (75.43%)       |
+| **TRAIN** | 1,256         | 138 (10.98%)       | 1,118 (89.01%)       |
+| **VAL** | 314           | 31 (9.87%)         | 283 (90.13%)         |
+| **TEST** | 1,571         | 384 (24.44%)       | 1,187 (75.56%)       |
 
 
 ## split_1: geographical 

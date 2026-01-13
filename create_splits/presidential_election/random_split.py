@@ -10,9 +10,10 @@ def create_random_split(features_df, TRAIN_RATIO, VALIDATION_RATIO):
     split_name: split_0
     """
     randomness_factor = 0.2
+    rng = np.random.default_rng(42)
     num_nodes = len(features_df)
     rank_idx = features_df['Density per square km'].rank(pct=True)
-    noise = np.random.uniform(-randomness_factor, randomness_factor, size=num_nodes)
+    noise = rng.uniform(-randomness_factor, randomness_factor, size=num_nodes)
     mix = rank_idx + noise
 
     sorted_idx = np.argsort(mix)

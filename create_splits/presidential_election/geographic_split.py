@@ -10,21 +10,22 @@ def create_geographic_split(features_df, VALIDATION_RATIO):
     state_lables = features_df['state'].values
     num_nodes = len(state_lables)
 
-    eastern_states = {
-        'connecticut', 'maine', 'massachusetts', 'newhampshire', 'rhodeisland',
-        'vermont', 'newjersey', 'newyork', 'pennsylvania',
-        'delaware', 'maryland', 'virginia', 'westvirginia', 'northcarolina',
-        'southcarolina', 'georgia', 'florida'
+    north_states = {
+        'washington', 'oregon', 'kansas', 'california', 'idaho'
+        'minnesota','wyoming', 'northdakota', 'southdakota', 'nebreaska','wisconsin', 'michigan', 'illinois', 'colorado', 'iowa', 'indiana', 'ohio'
+        'newyork', 'newjersey', 'pennsylvania', 'vermont', 'newhampshire',
+        'massachusetts', 'connecticut', 'rhodeisland', 'maine',
+        'maryland', 'delaware', 'districtofcolumbia', 'virginia'
     }
 
-    eastern_idx = np.array([i for i in range(num_nodes)
-                            if state_lables[i] in eastern_states])
-    non_eastern_idx = np.array([i for i in range(num_nodes)
-                                if state_lables[i] not in eastern_states])
-
-    val_size = int(len(non_eastern_idx) * VALIDATION_RATIO)
-    val_nodes = non_eastern_idx[:val_size]
-    train_nodes = non_eastern_idx[val_size:]
-    test_nodes = eastern_idx
+    test_idx = np.array([i for i in range(num_nodes)
+                            if state_lables[i] in north_states])
+    train_idx = np.array([i for i in range(num_nodes)
+                                if state_lables[i] not in north_states])
+    np.random.shuffle(train_idx)
+    val_size = int(len(train_idx) * VALIDATION_RATIO)
+    val_nodes = train_idx[:val_size]
+    train_nodes = train_idx[val_size:]
+    test_nodes = test_idx
 
     return _create_mask(num_nodes, train_nodes, val_nodes, test_nodes)
