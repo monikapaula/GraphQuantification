@@ -136,7 +136,7 @@ def get_dataset(split_name):
 
 if __name__ == '__main__':
     save_splits_pt()
-    data, train_mask, val_mask, test_mask = get_dataset(split_name='split_1')
+    data, train_mask, val_mask, test_mask = get_dataset(split_name='split_2')
     print("size training:", train_mask.sum())
     print("size val:", val_mask.sum())
     print("size test:", test_mask.sum())
