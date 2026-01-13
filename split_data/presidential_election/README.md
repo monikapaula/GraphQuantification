@@ -24,10 +24,10 @@ Simulates a standard election with scattered missing results
 Train on non_Eastern states, test on Eastern states
 
 | Dataset Split | Total Samples | Class 0 (Democrat) | Class 1 (Republican) |
-| :--- | :--- | :--- | :--- |
-| **TRAIN** | 2,105 | 242 (11.50%) | **1,863 (88.50%)**|
-| **VAL** | 233 | 72 (30.90%) | 161 (69.10%) |
-| **TEST** | 803 | 239 (29.76%) | **564 (70.24%)** |
+| :--- |:--------------|:-------------------|:---------------------|
+| **TRAIN** | 1,741         | 244 (14.01%)       | **1,497 (85.98%)**   |
+| **VAL** | 193           | 23 (11.92%)        | 170 (88.08%)         |
+| **TEST** | 1,207         | 286 (23.69%)       | **921 (76.30%)**     |
 
 
 ## split_2: coastal

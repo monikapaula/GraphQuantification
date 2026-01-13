@@ -3,8 +3,7 @@ from utils.mask_creation import _create_mask
 
 def create_geographic_split(features_df, VALIDATION_RATIO):
     """
-    Train and val set on non-Eastern states, test on Eastern states, to create natural shift
-    between democrats and Republicans
+    Train and val set on southern states, test on northern states
     split_name: split_1
     """
     state_lables = features_df['state'].values
