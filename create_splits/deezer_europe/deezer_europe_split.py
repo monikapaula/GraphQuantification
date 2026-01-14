@@ -58,7 +58,6 @@ def svd_embeddings(features_df, embed_dim=256):
     X_embeddings = np.zeros((num_users, embed_dim + 1), dtype=np.float32)
     X_embeddings[valid_indices, :embed_dim] = X_emb
     X_embeddings[valid_indices, -1] = 1.0
-    print(f"SVD Variane: {svd.explained_variance_ratio_.sum()}")
 
     return X_embeddings
 
