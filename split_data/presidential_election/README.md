@@ -25,8 +25,8 @@ Train on non_Eastern states, test on Eastern states
 
 | Dataset Split | Total Samples | Class 0 (Democrat) | Class 1 (Republican) |
 | :--- |:--------------|:-------------------|:---------------------|
-| **TRAIN** | 1,741         | 244 (14.01%)       | **1,497 (85.98%)**   |
-| **VAL** | 193           | 23 (11.92%)        | 170 (88.08%)         |
+| **TRAIN** | 1,741         | 245 (14.07%)       | **1,496 (85.93%)**   |
+| **VAL** | 193           | 22 (11.39%)        | 171 (88.60%)         |
 | **TEST** | 1,207         | 286 (23.69%)       | **921 (76.30%)**     |
 
 
@@ -46,5 +46,5 @@ Train on metropolitan counties (more Democrats) and test on non-metropolitan cou
 | Dataset Split | Total Samples | Class 0 (Democrat) | Class 1 (Republican) |
 | :--- |:--------------|:-------------------|:---------------------|
 | **TRAIN** | 989           | **338 (34.18%)**   | 651 (65.82%)         |
-| **VAL** | 314           | 29 (9.24%)         | 285 (90.76%)         |
-| **TEST** | 1,838         | **186 (10.12%)**   | 1,652 (89.88%)       |
+| **VAL** | 314           | 38 (12.10%)        | 276 (87.89%)         |
+| **TEST** | 1,838         | **157 (8.54%)**    | 1,681 (91.46%)       |

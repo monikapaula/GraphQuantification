@@ -8,6 +8,7 @@ def create_geographic_split(features_df, VALIDATION_RATIO):
     """
     state_lables = features_df['state'].values
     num_nodes = len(state_lables)
+    rng = np.random.default_rng(seed=42)
 
     north_states = {
         'washington', 'oregon', 'kansas', 'california', 'idaho'
@@ -21,7 +22,7 @@ def create_geographic_split(features_df, VALIDATION_RATIO):
                             if state_lables[i] in north_states])
     train_idx = np.array([i for i in range(num_nodes)
                                 if state_lables[i] not in north_states])
-    np.random.shuffle(train_idx)
+    rng.shuffle(train_idx)
     val_size = int(len(train_idx) * VALIDATION_RATIO)
     val_nodes = train_idx[:val_size]
     train_nodes = train_idx[val_size:]
