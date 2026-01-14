@@ -28,9 +28,3 @@ def create_metro_split(features_df):
     rng.shuffle(test_nodes)
 
     return _create_mask(num_nodes, train_indices, val_nodes, test_nodes)
-
-
-
-
-
-
