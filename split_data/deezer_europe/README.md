@@ -11,10 +11,10 @@ The model is trained primarily on users who listen to female-dominated artists (
 The model is evaluated primarily on users who listen to male-dominated artists (Class 0). The split does not include featureless nodes (users without artist history) into the training set.
 
 | Dataset Split | Total Samples | Class 0 (Count / %) | Class 1 (Count / %) |
-| :--- | :--- | :--- | :--- |
-| **TRAIN** | 8,174 | 2,802 (34.28%) | 5,372 (65.72%) |
-| **VAL** | 2,043 | 653 (31.96%) | 1,390 (68.04%) |
-| **TEST** | 11,882 | 8,813 (74.17%) | 3,069 (25.83%) |
+| :--- |:--------------|:--------------------|:--------------------|
+| **TRAIN** | 10,496        | 7,535 (71.79%)      | 2,961 (28.21%)      |
+| **VAL** | 2,624         | 1,914 (72.94%)      | 710 (27.06%)        |
+| **TEST** | 8,576         | 2,597 (30.28%)      | 5,979 (69.72%)      |
 
 
 ### split_1:
@@ -22,10 +22,10 @@ The model is trained primarily on users who listen to male-dominated artists (Cl
 The model is evaluated primarily on users who listen to female-dominated artists (Class 1). The split does not include featureless nodes (users without artist history) into the training set.
 
 | Dataset Split | Total Samples | Class 0 (Count / %) | Class 1 (Count / %) |
-| :--- | :--- | :--- | :--- |
-| **TRAIN** | 14,606 | 9,110 (62.37%) | 5,496 (37.63%) |
-| **VAL** | 3,651 | 2,267 (62.09%) | 1,384 (37.91%) |
-| **TEST** | 3,842 | 891 (23.19%) | 2,951 (76.81%) |
+| :--- |:--------------|:--------------------|:--------------------|
+| **TRAIN** | 8,030         | 2,704 (33.67%)      | 5,326 (66.33%)      |
+| **VAL** | 2,007         | 676 (33.68%)        | 1,331 (66.32%)      |
+| **TEST** | 12,062        | 8,888 (73.69%)      | 3,174 (26.31%)      |
 
 
 ## 2. Behavioral & Popularity Splits

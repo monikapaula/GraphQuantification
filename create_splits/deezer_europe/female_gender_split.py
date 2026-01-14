@@ -28,7 +28,7 @@ def artist_gender_majority(user_artist_df):
 
 def categorize_by_maj(stats):
     min_listeners = 5
-    majority = 0.55
+    majority = 0.48
 
     s = stats[stats['total'] >= min_listeners].copy()
 
@@ -78,12 +78,12 @@ def female_gender_split(features_df, target_df, include_featureless_nodes:False)
             else:
                 dropped_count += 1
             continue
-        f_share = f_cnt / total
+        m_share = m_cnt / total
 
-        if f_share >= 0.40:
-            test_idx.append(u)
-        else:
+        if m_share >= 0.40:
             train_idx.append(u)
+        else:
+            test_idx.append(u)
 
     train_idx = np.array(train_idx, dtype=int)
     rng.shuffle(train_idx)

@@ -109,7 +109,7 @@ if __name__ == "__main__":
     save_splits_pt()
     features, _, _ = load_data()
     embeddings = svd_embeddings(features, embed_dim=256)
-    data, train_mask, val_mask, test_mask = get_dataset("split_0")
+    data, train_mask, val_mask, test_mask = get_dataset("split_1")
     y = data.y
     class_balance(y, train_mask, "TRAIN")
     class_balance(y, val_mask, "VAL")
