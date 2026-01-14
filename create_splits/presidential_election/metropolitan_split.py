@@ -16,27 +16,18 @@ def create_metro_split(features_df):
     population = features_df['Total Population'].values
     num_nodes = len(features_df)
 
-    train_nodes = np.where(population >= 50000)[0]  # MSAs
-    val_indices = np.where((population < 50000) & (population >= 10000))[0]  # µSAs
-    test_nodes = np.where(population < 10000)[0]  # Rural areas
+    train_indices = np.where(population >= 50000)[0]  # MSAs
+    val_indices = np.where(population < 50000) [0] # µSAs
+    #test_indices = np.where(population < 10000)[0]  # Rural areas
 
     rng = np.random.default_rng(seed=42)
-    rng.shuffle(train_nodes)
     rng.shuffle(val_indices)
-    rng.shuffle(test_nodes)
-
-    test_target = int(num_nodes * 0.2)
-    test_nodes = test_nodes[:test_target]
 
     val_target = int(num_nodes * 0.1)
     val_nodes = val_indices[:val_target]
+    test_nodes = val_indices[val_target:]
 
-    unused_val_nodes = val_indices[val_target:]
-    train_nodes = np.concatenate([train_nodes, unused_val_nodes])
-    #num_left_out = len(unused_val_nodes)
-
-
-    return _create_mask(num_nodes, train_nodes, val_nodes, test_nodes)
+    return _create_mask(num_nodes, train_indices, val_nodes, test_nodes)
 
 
 

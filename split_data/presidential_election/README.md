@@ -44,7 +44,7 @@ Create a split based on population/ density to simulate metropolitan vs non-metr
 Train on metropolitan counties (more Democrats) and test on non-metropolitan counties (more Republicans)
 
 | Dataset Split | Total Samples | Class 0 (Democrat) | Class 1 (Republican) |
-| :--- | :--- | :--- | :--- |
-| **TRAIN** | 2,094 | **461 (22.02%)** | 1,633 (77.98%) |
-| **VAL** | 314 | 21 (6.69%) | 293 (93.31%) |
-| **TEST** | 628 | **60 (9.55%)** | 568 (90.45%) |
+| :--- |:--------------|:-------------------|:---------------------|
+| **TRAIN** | 989           | **338 (34.18%)**   | 651 (65.82%)         |
+| **VAL** | 314           | 29 (9.24%)         | 285 (90.76%)         |
+| **TEST** | 1,838         | **186 (10.12%)**   | 1,652 (89.88%)       |
