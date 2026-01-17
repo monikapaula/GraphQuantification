@@ -32,9 +32,9 @@ def split_1(years):
     return train_idx, val_idx, test_idx
 
 def split_2(years):
-    train_idx = np.where(years <= 2016)[0]
-    val_idx = np.where((years >= 2017) & (years <= 2018))[0]
-    test_idx = np.where(years >= 2019)[0]
+    train_idx = np.where((years >= 2014) & (years <= 2018))[0]
+    val_idx = np.where((years >= 2012) & (years <= 2013))[0]
+    test_idx = np.where((years <= 2011) | (years >= 2019))[0]
 
     return train_idx, val_idx, test_idx
 
@@ -73,8 +73,31 @@ def get_dataset(split_name):
 
     return data, data.train_mask, data.val_mask, data.test_mask
 
+def class_prevalences(data):
+    y = data.y.squeeze()
+    classes = int(y.max().item()) + 1
+    train_mask = data.train_mask
+    test_mask = data.test_mask
+
+    y_train = y[train_mask]
+    y_test = y[test_mask]
+
+    train_counts = torch.bincount(y_train, minlength=classes).float()
+    test_counts = torch.bincount(y_test, minlength=classes).float()
+
+    train_prev = train_counts / train_counts.sum().clamp(min=1)
+    test_prev = test_counts / test_counts.sum().clamp(min=1)
+
+    top5 = torch.topk(train_prev, k =5).indices
+
+    for c in top5.tolist():
+        print(f"{c:5d} | {train_prev[c]:10.4f} | {test_prev[c]:10.4f}")
+
+    return top5, train_prev, test_prev
+
 
 if __name__ == '__main__':
+
     data = load_arxiv_dataset()
     num_nodes = data.num_nodes
     years = data.node_year.flatten().numpy()
@@ -99,3 +122,6 @@ if __name__ == '__main__':
         print(f"  Test:  {n_test:>6} ({n_test / num_nodes:>7.2%})")
         print(f"  Coverage:     {n_total / num_nodes:>7.2%}")
     create_splits()
+
+    data, train_mask, val_mask, test_mask = get_dataset("split_2")
+    top5_classes, train_prev, test_prev = class_prevalences(data)

@@ -96,3 +96,16 @@ def plot_probability_distribution(wrapper, indices, title="Probability Distribut
     plt.grid(axis='y', linestyle='--', alpha=0.5)
     plt.tight_layout()
     plt.show()
+
+def kl_divergence(p,q ):
+    eps = 1e-12
+    p = np.array(p, dtype=float)
+    q = np.array(q, dtype=float)
+
+    p = p + eps
+    q = q + eps
+    p = p / p.sum()
+    q = q / q.sum()
+
+    divergence = float(np.sum(p * np.log(p/q)))
+    return divergence
