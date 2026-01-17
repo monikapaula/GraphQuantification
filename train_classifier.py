@@ -24,7 +24,7 @@ MODEL_CONFIG = {
     'input_dim': None,
     'hidden_dim': 256,
     'output_dim': None,
-    'dropout': 0.3,
+    'dropout': 0.2,
     'lr': 0.001,
     'save_model': True
 }
@@ -69,7 +69,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
         class_weights = class_weights.to(device)
 
     criterion = nn.NLLLoss(weight=class_weights)
-    early_stopper = EarlyStopper(patience=20, min_delta=0.001 )
+    early_stopper = EarlyStopper(patience=50, min_delta=0.001 )
     best_model_state = None
     best_val_metric = -float('inf')
 

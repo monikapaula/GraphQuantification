@@ -1,6 +1,6 @@
 # A Collection of Benchmarks for Graph Quantification Learning under Real-world Distribution Shifts
 
-This repository provides a pipeline for training Graph Neural Networks (GNNs) for node classification and later quantifying the class prevalences using the QuaPy library. It was created for a Bachelor thesis 
+This repository provides a comprehensive pipeline for training Graph Neural Networks (GNNs) for node classification and quantifying class prevalences using the QuaPy library. Created for a Bachelor thesis studying graph quantification under distribution shifts.
 
 ## Table of Contents
 <!-- TOC -->
@@ -20,14 +20,16 @@ Ensure you have python 3.8+ and the necessary libraries installed:
 pip install torch torch-geometric pandas numpy quapy
 ```
 
+
 ## Datasets and Splits
-The project presents four datasets each with a varity of feature-based distribution shifts
-* [Presidential-Election](split_data/presidential_election/README.md)
-* [Twitch-Gamers](split_data/twitch_gamers/README.md)
-* [Deezer-Europe](split_data/deezer_europe/README.md)
-* [OGBN-Arxiv](split_data/ogbn_arxiv/README.md)
+The project presents four datasets each with a variety of feature-based distribution shifts. To learn more about the splits and class distributions click on the dataset:
 
-
+| Dataset               | Nodes    | Edges     | Classes | Domain            |
+| --------------------- |----------|-----------|---------|-------------------|
+| [Presidential-Election](split_data/presidential_election/README.md) | 3K       | 18K       | 2       | Political Network |
+| [Twitch-Gamers](split_data/twitch_gamers/README.md)         | 28K      | 92K       | 2       | Social Network    |
+| [Deezer-Europe](split_data/deezer_europe/README.md)         | 1,9 - 9K | 31 - 153K | 3       | Social Network    |
+| [OGBN-Arxiv](split_data/ogbn_arxiv/README.md)           | 169K     | 1.2M      | 40      | Citation Network  |
 ### To download the datasets, run:
 ```
 python utils/dataset_manager.py 
@@ -38,7 +40,7 @@ python utils/dataset_manager.py
 The train.py script trains a selected model on a specific dataset and split. 
 
 ```
-python train.py --dataset <dataset_name> --splits <split_1> <split_2> --models GCN SAGE --epochs 300
+python train.py --dataset <dataset_name> --splits <split_1> <split_2> --models  MLP GCN SAGE --epochs 300
 ```
 
 ### Configuration options:
@@ -67,3 +69,31 @@ python quantify.py --datasets <dataset_name> --models GCN --splits <split_name> 
 * PACC: Probabilistic Adjusted Classify & Count
 * KDEy: Kernel Density Estimation (using Quapy's GridSearch for bandwidth)
 * SIS-ACC/PACC: Structural Importance Sampling 
+
+## Results
+CSV outputs track performance across all dataset/split/model combinations:
+```
+classification_results.csv:
+Dataset,Split,Model,Macro_F1
+presidential_election,temporal_shift,GCN,0.8234
+
+quantification_results.csv:
+Dataset,Split,Classifier,Method,MAE
+presidential_election,temporal_shift,GCN,PACC,0.0342
+
+```
+
+## Project Structure
+```text
+├── train.py                # Main script for training the node classifiers
+├── create_splits/          # Scripts to define dataset-specific splits
+│   ├── presidential_election/
+│   ├── twitch_gamers/
+│   └── ...
+├── models/                 # Model architectures (GCN, GraphSAGE, MLP)
+├── utils/                  # Helper functions (Metrics, DataLoaders, EarlyStopping)
+├── split_data/             # Processed datasets and split-specific READMEs
+└── quantification/         # Quantification logic and evaluation
+    ├── quantify.py         # Main quantification pipeline script
+    └── results/            # Directory for experiment outputs and logs 
+```
