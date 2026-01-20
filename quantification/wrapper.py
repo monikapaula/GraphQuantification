@@ -27,7 +27,6 @@ class WrapperClassifier(BaseEstimator, ClassifierMixin):
             self._precomputed_probs = F.softmax(logits, dim=1).cpu().numpy()
 
     def fit(self, X=None, Y=None):
-        # No fitting necessary as the classifier is pre-trained
         if self._precomputed_probs is None:
             self._precompute()
         return self

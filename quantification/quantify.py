@@ -22,9 +22,7 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
     DEVICE = 'cpu'
 
     data = load_data_object(DATASET_NAME, base_dir=BASE_DIR, split_name=SPLIT_NAME)
-    #print("Shape",data.x.shape)
     num_nodes = data.num_nodes
-    #print(f"Dataset '{DATASET_NAME}' loaded. Nodes: {data.num_nodes}, Features: {data.x.size(1)}")
     model, loaded_config = load_model(
         dataset_name=DATASET_NAME,
         model_type=CLASSIFIER_MODEL,
@@ -50,7 +48,6 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
     test_set = LabelledCollection(test_indices, test_y, classes=classes)
     param_grid = {'bandwidth': [0.1,0.15,0.2]}
 
-    #Experiments
     if num_classes <= 2:
         val_protocol = APP(val_set, n_prevalences=11, repeats=10, sample_size=len(val_set))
     else:

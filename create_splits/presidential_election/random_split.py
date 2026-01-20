@@ -6,7 +6,6 @@ from utils.mask_creation import _create_mask
 def create_random_split(features_df, TRAIN_RATIO, VALIDATION_RATIO):
     """
     trying a random split where different counties are randomly assigned to train, val and test
-    (should mimic real-world)
     split_name: split_0
     """
     randomness_factor = 0.2

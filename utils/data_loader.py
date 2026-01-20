@@ -79,10 +79,6 @@ def load_model(dataset_name, model_type, split_name, model_config, device='cpu')
         raise FileNotFoundError(f"Could not find model file at: {model_path}")
     config = torch.load(model_path, map_location=device)
     model_config = config.get("model_config")
-    if model_config is None:
-        # Debug print to see what IS in there
-        print(f"DEBUG: Keys found in checkpoint: {list(config.keys())}")
-        raise KeyError(f"The file {model_fname} does not contain 'model_config'. ")
 
     input_dim = model_config['input_dim']
     hidden_dim = model_config['hidden_dim']

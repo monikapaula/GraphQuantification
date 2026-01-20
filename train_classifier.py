@@ -93,8 +93,8 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
             train_acc = evaluate(model, x, edge_index, train_mask, y)
             val_macro_f1 = macro_f1(model, x, edge_index, val_mask, y)
 
-        #if epoch % 100 == 0 or epoch == 0:
-            #print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
+        if epoch % 100 == 0 or epoch == 0:
+            print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
 
         if val_macro_f1 > best_val_metric:
             best_val_metric = val_macro_f1
@@ -176,9 +176,9 @@ if __name__ == '__main__':
                 dataset_name=run_name
             )
             y = data.y
-            class_balance(y, train_mask, "TRAIN")
-            class_balance(y, val_mask, "VAL")
-            class_balance(y, test_mask, "TEST")
+            #class_balance(y, train_mask, "TRAIN")
+            #class_balance(y, val_mask, "VAL")
+            #class_balance(y, test_mask, "TEST")
 
             total_nodes = data.num_nodes
             train_pct = (train_mask.sum().item() / total_nodes) * 100
