@@ -137,6 +137,7 @@ if __name__ == '__main__':
     results_table = []
     timestamp= datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
     output_dir = 'quantification/results'
+    os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, f"classification_results_{timestamp}.csv")
 
     for DATASET in args.datasets:
@@ -156,7 +157,6 @@ if __name__ == '__main__':
                 continue
 
             for MODEL_NAME in args.models:
-                DATASET = args.dataset
                 print(f"\n{'=' * 50}")
                 print(f"RUNNING: Dataset={DATASET}, Split={SPLIT_NAME}, Model={MODEL_NAME}")
 
