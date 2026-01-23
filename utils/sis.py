@@ -151,7 +151,6 @@ def quantification_ppr(save_path, wrapper, test_mask):
         method='inversion',
         solver= 'minimize'
     )
-    print('quantification_ppr: mode', mode, 'test_cc', test_cc, 'adjusted_quant', adjusted_quant)
     return adjusted_quant
 
 

@@ -64,14 +64,14 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
     true_prev = test_set.prevalence()
 
     #plot_probability_distribution(wrapper, val_indices, title="Validation Set Probabilities")
-    print(f"\nTrue prevalence: {np.round(test_set.prevalence(), 4)}")
+    #print(f"\nTrue prevalence: {np.round(test_set.prevalence(), 4)}")
 
     for name, quantifier in quantifiers.items():
         quantifier.fit(val_set.instances, val_set.labels)
         est_prev = quantifier.quantify(test_set.instances)
         mae = qp.error.mae(test_set.prevalence(), est_prev)
         kl= kl_divergence(true_prev, est_prev)
-        print(f"{name}: Estimated = {np.round(est_prev, 4)}\tMAE = {mae:.4f}\tKL = {kl:.4f}")
+        #print(f"{name}: Estimated = {np.round(est_prev, 4)}\tMAE = {mae:.4f}\tKL = {kl:.4f}")
 
         run_results.append({
             'Dataset': DATASET_NAME,
