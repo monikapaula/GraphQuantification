@@ -94,7 +94,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
             train_acc = evaluate(model, x, edge_index, train_mask, y)
             val_macro_f1 = macro_f1(model, x, edge_index, val_mask, y)
 
-        if epoch % 100 == 0 or epoch == 0:
+        if epoch % 10 == 0 or epoch == 0:
             print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
 
         if val_macro_f1 > best_val_metric:
@@ -153,7 +153,8 @@ if __name__ == '__main__':
                     data,train_mask,val_mask,test_mask = get_ogbn_arxiv_dataset(split_name=SPLIT_NAME)
                 else:
                     raise ValueError(f"Unknown dataset '{DATASET}'")
-            except:
+            except Exception as e:
+                print(f"FEHLER beim Laden von {DATASET}: {e}")
                 continue
 
             for MODEL_NAME in args.models:
