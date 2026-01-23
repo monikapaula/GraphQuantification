@@ -15,9 +15,8 @@ class GCN(nn.Module):
         self.use_bias = use_bias
 
         self.conv1 = GCNConv(in_dim, hidden_dim, use_bias, bias=use_bias)
-        self.linear1 = nn.Linear(hidden_dim,hidden_dim, bias=use_bias)
         self.conv2 = GCNConv(hidden_dim, hidden_dim, bias=use_bias)
-        self.linear2 = nn.Linear(hidden_dim,out_dim, bias=use_bias)
+        self.linear1 = nn.Linear(hidden_dim,out_dim, bias=use_bias)
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, edge_index ):
@@ -26,11 +25,9 @@ class GCN(nn.Module):
         edge_index : adjacency matrix of edges
         return: tensor of posterior probabilities
         """
-        x = F.relu(self.conv1(x, edge_index))
-
-        x= self.linear1(x)
-        x = F.relu(x)
+        x= self.conv1(x, edge_index)
+        x = F.sigmoid(x)
         x = self.dropout(x)
-        x = F.relu(self.conv2(x, edge_index))
-        x = self.linear2(x)
+        x = F.sigmoid(self.conv2(x, edge_index))
+        x = self.linear1(x)
         return F.log_softmax(x, dim=1)

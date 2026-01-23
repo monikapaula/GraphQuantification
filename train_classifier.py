@@ -5,6 +5,7 @@ import torch.optim as optim
 import argparse
 import os
 import pandas as pd
+import datetime
 
 from create_splits.presidential_election.presidential_el_split import get_dataset as get_election_dataset
 from create_splits.deezer_europe.deezer_europe_split import get_dataset as get_deezer_dataset
@@ -126,7 +127,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train classifier model')
-    parser.add_argument('--dataset', type=str, choices=['deezer_europe', 'presidential_election', 'twitch_gamers', 'ogbn_arxiv'],
+    parser.add_argument('--datasets', type=str, nargs= '+', choices=['deezer_europe', 'presidential_election', 'twitch_gamers', 'ogbn_arxiv'],
                         help='Name of datasets')
     parser.add_argument('--splits', type=str, nargs='+')
     parser.add_argument('--models', type=str, nargs='+', choices=['GCN', 'MLP','SAGE'])
@@ -134,58 +135,62 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     results_table = []
+    timestamp= datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
     output_dir = 'quantification/results'
-    output_file = os.path.join(output_dir, "classification_results.csv")
+    output_file = os.path.join(output_dir, f"classification_results_{timestamp}.csv")
 
-    for SPLIT_NAME in args.splits:
-        for MODEL_NAME in args.models:
-            DATASET = args.dataset
-            print(f"\n{'=' * 50}")
-            print(f"RUNNING: Dataset={DATASET}, Split={SPLIT_NAME}, Model={MODEL_NAME}")
+    for DATASET in args.datasets:
+        for SPLIT_NAME in args.splits:
+            try:
+                if DATASET == 'presidential_election':
+                    data, train_mask, val_mask, test_mask = get_election_dataset(split_name=SPLIT_NAME)
+                elif DATASET == 'deezer_europe':
+                    data, train_mask, val_mask, test_mask = get_deezer_dataset(split_name=SPLIT_NAME)
+                elif DATASET == 'twitch_gamers':
+                    data,train_mask,val_mask,test_mask = get_twitch_gamers_dataset(split_name=SPLIT_NAME)
+                elif DATASET == 'ogbn_arxiv':
+                    data,train_mask,val_mask,test_mask = get_ogbn_arxiv_dataset(split_name=SPLIT_NAME)
+                else:
+                    raise ValueError(f"Unknown dataset '{DATASET}'")
+            except:
+                continue
 
+            for MODEL_NAME in args.models:
+                DATASET = args.dataset
+                print(f"\n{'=' * 50}")
+                print(f"RUNNING: Dataset={DATASET}, Split={SPLIT_NAME}, Model={MODEL_NAME}")
 
-            if DATASET == 'presidential_election':
-                data, train_mask, val_mask, test_mask = get_election_dataset(split_name=SPLIT_NAME)
-            elif DATASET == 'deezer_europe':
-                data, train_mask, val_mask, test_mask = get_deezer_dataset(split_name=SPLIT_NAME)
-            elif DATASET == 'twitch_gamers':
-                data,train_mask,val_mask,test_mask = get_twitch_gamers_dataset(split_name=SPLIT_NAME)
-            elif DATASET == 'ogbn_arxiv':
-                data,train_mask,val_mask,test_mask = get_ogbn_arxiv_dataset(split_name=SPLIT_NAME)
-            else:
-                raise ValueError(f"Unknown dataset '{DATASET}'")
+                current_config = MODEL_CONFIG.copy()
+                current_config['name'] = MODEL_NAME
+                current_config['output_dim'] = int(data.y.max().item()) + 1
+                current_config['epochs'] = args.epochs
 
-            current_config = MODEL_CONFIG.copy()
-            current_config['name'] = MODEL_NAME
-            current_config['output_dim'] = int(data.y.max().item()) + 1
-            current_config['epochs'] = args.epochs
+                y_train = data.y[train_mask]
+                weights = compute_class_weights(y_train)
+                run_name = f"{DATASET}_{SPLIT_NAME}"
 
-            y_train = data.y[train_mask]
-            weights = compute_class_weights(y_train)
-            run_name = f"{DATASET}_{SPLIT_NAME}"
+                macro_f1_score= train(
+                    config=current_config,
+                    x=data.x,
+                    edge_index=data.edge_index,
+                    y=data.y,
+                    train_mask=train_mask,
+                    val_mask=val_mask,
+                    test_mask=test_mask,
+                    class_weights=weights,
+                    dataset_name=run_name
+                )
+                y = data.y
+                #class_balance(y, train_mask, "TRAIN")
+                #class_balance(y, val_mask, "VAL")
+                #class_balance(y, test_mask, "TEST")
 
-            macro_f1_score= train(
-                config=current_config,
-                x=data.x,
-                edge_index=data.edge_index,
-                y=data.y,
-                train_mask=train_mask,
-                val_mask=val_mask,
-                test_mask=test_mask,
-                class_weights=weights,
-                dataset_name=run_name
-            )
-            y = data.y
-            #class_balance(y, train_mask, "TRAIN")
-            #class_balance(y, val_mask, "VAL")
-            #class_balance(y, test_mask, "TEST")
+                total_nodes = data.num_nodes
+                train_pct = (train_mask.sum().item() / total_nodes) * 100
+                val_pct = (val_mask.sum().item() / total_nodes) * 100
+                test_pct = (test_mask.sum().item() / total_nodes) * 100
 
-            total_nodes = data.num_nodes
-            train_pct = (train_mask.sum().item() / total_nodes) * 100
-            val_pct = (val_mask.sum().item() / total_nodes) * 100
-            test_pct = (test_mask.sum().item() / total_nodes) * 100
-
-            results_table.append([DATASET, SPLIT_NAME, MODEL_NAME, f"{macro_f1_score:.4f}"])
+                results_table.append([DATASET, SPLIT_NAME, MODEL_NAME, f"{macro_f1_score:.4f}"])
 
 
     headers = ["Dataset", "Split", "Model", "Macro F1"]

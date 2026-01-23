@@ -15,7 +15,7 @@ from utils.data_loader import load_data_object, load_model
 from create_splits.split_manager import load_split
 from quantification.wrapper import WrapperClassifier
 from utils.sis import compute_confusion, quantification_ppr
-from utils.metrics import plot_probability_distribution
+from utils.metrics import kl_divergence,plot_probability_distribution
 
 def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
     BASE_DIR = 'split_data'
@@ -70,14 +70,16 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
         quantifier.fit(val_set.instances, val_set.labels)
         est_prev = quantifier.quantify(test_set.instances)
         mae = qp.error.mae(test_set.prevalence(), est_prev)
-        print(f"{name}: Estimated = {np.round(est_prev, 4)}\tMAE = {mae:.4f}")
+        kl= kl_divergence(true_prev, est_prev)
+        print(f"{name}: Estimated = {np.round(est_prev, 4)}\tMAE = {mae:.4f}\tKL = {kl:.4f}")
 
         run_results.append({
             'Dataset': DATASET_NAME,
             'Split': SPLIT_NAME,
             'Classifier': CLASSIFIER_MODEL,
             'Method': name,
-            'MAE': mae
+            'MAE': mae,
+            'KL': kl
         })
 
     if run_sis:
@@ -99,13 +101,16 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
                 )
             try:
                 est_prev_sis = quantification_ppr(sis_path, wrapper, test_mask)
-                mae_sis = qp.error.mae(test_set.prevalence(), est_prev_sis)
+                mae_sis = qp.error.mae(true_prev, est_prev_sis)
+                kl_sis = kl_divergence(true_prev, est_prev_sis)
                 run_results.append({
                     'Dataset': DATASET_NAME,
                     'Split': SPLIT_NAME,
                     'Classifier': CLASSIFIER_MODEL,
                     'Method': name,
-                    'MAE': mae_sis})
+                    'MAE': mae_sis,
+                    'KL': kl_sis
+                })
 
             except Exception as e:
                 print(f"SIS-ACC failed {e}")
@@ -123,17 +128,19 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     all_experiments = []
+    path = Path(__file__).parent / "results/quantification_results.csv"
+    path.parent.mkdir(parents=True, exist_ok=True)
 
     for dataset in args.datasets:
         for split in args.splits:
             for model in args.models:
-                result = quantify(dataset, split, model, run_sis = args.run_sis)
-                all_experiments.extend(result)
-
-    path = Path(__file__).parent / "results/quantification_results.csv"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(all_experiments).to_csv(path, mode='a', index=False, header=not path.exists())
-
+                try:
+                    result = quantify(dataset, split, model, run_sis = args.run_sis)
+                    all_experiments.extend(result)
+                    df_step = pd.DataFrame(result)
+                    df_step.to_csv(path, mode='a', index=False, header=not path.exists())
+                except:
+                    continue
 
 
 

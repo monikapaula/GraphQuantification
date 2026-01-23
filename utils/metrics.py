@@ -98,7 +98,7 @@ def plot_probability_distribution(wrapper, indices, title="Probability Distribut
     plt.show()
 
 def kl_divergence(p,q ):
-    eps = 1e-12
+    eps = 1e-5
     p = np.array(p, dtype=float)
     q = np.array(q, dtype=float)
 
