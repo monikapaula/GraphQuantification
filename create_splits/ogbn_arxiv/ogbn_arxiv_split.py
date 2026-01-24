@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch_geometric.transforms as T
 from pathlib import Path
 from torch_geometric.data import Data
 from ogb.nodeproppred import PygNodePropPredDataset
@@ -12,7 +13,11 @@ DATA_ROOT = Path(__file__).parent.parent.parent.resolve()
 
 def load_arxiv_dataset():
     root = DATA_ROOT / 'data'
-    dataset = PygNodePropPredDataset(name='ogbn-arxiv', root=str(root))
+    transform = T.Compose([
+        T.ToUndirected(),
+        T.AddSelfLoops()
+    ])
+    dataset = PygNodePropPredDataset(name='ogbn-arxiv', root=str(root), transform=transform)
     data = dataset[0]
 
     return data

@@ -17,10 +17,12 @@ class MLP(nn.Module):
         self.lin1 = nn.Linear(in_dim, hidden_dim)
         self.lin2 = nn.Linear(hidden_dim, out_dim)
         self.dropout = nn.Dropout(p=dropout)
+        self.bn1 = torch.nn.BatchNorm1d(hidden_dim)
 
     def forward(self, x, edge_index=None):
 
         x = self.lin1(x)
+        X = self.bn1(x)
         x = F.relu(x)
         x = self.dropout(x)
         x = self.lin2(x)

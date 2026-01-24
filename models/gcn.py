@@ -16,8 +16,11 @@ class GCN(nn.Module):
 
         self.conv1 = GCNConv(in_dim, hidden_dim, use_bias, bias=use_bias)
         self.conv2 = GCNConv(hidden_dim, hidden_dim, bias=use_bias)
+        self.conv3 = GCNConv(hidden_dim, out_dim, bias=use_bias)
         self.linear1 = nn.Linear(hidden_dim,out_dim, bias=use_bias)
         self.dropout = nn.Dropout(p=dropout)
+        self.bn1 = nn.BatchNorm1d(hidden_dim)
+        self.bn2 = nn.BatchNorm1d(hidden_dim)
 
     def forward(self, x, edge_index ):
         """
@@ -26,8 +29,15 @@ class GCN(nn.Module):
         return: tensor of posterior probabilities
         """
         x= self.conv1(x, edge_index)
-        x = F.sigmoid(x)
+        x = self.bn1(x)
+        x = F.relu(x)
         x = self.dropout(x)
-        x = F.sigmoid(self.conv2(x, edge_index))
+
+        x = self.conv2(x, edge_index)
+        x =self.bn2(x)
+        x = F.relu(x)
+        x = self.dropout(x)
+
+        x = self.conv3(x, edge_index)
         x = self.linear1(x)
         return F.log_softmax(x, dim=1)
