@@ -22,7 +22,7 @@ class MLP(nn.Module):
     def forward(self, x, edge_index=None):
 
         x = self.lin1(x)
-        X = self.bn1(x)
+        x = self.bn1(x)
         x = F.relu(x)
         x = self.dropout(x)
         x = self.lin2(x)
