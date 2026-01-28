@@ -25,7 +25,7 @@ MODEL_CONFIG = {
     'input_dim': None,
     'hidden_dim': 256,
     'output_dim': None,
-    'dropout': 0.5,
+    'dropout': 0.2,
     'lr': 0.01,
     'save_model': True
 }
