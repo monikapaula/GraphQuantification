@@ -15,7 +15,7 @@ class MLP(nn.Module):
         self.out_dim = out_dim
 
         self.lin1 = nn.Linear(in_dim, hidden_dim)
-        self.lin2 = nn.Linear(hidden_dim, hidden_dim)
+        self.lin2 = nn.Linear(hidden_dim, out_dim)
         self.dropout = nn.Dropout(p=dropout)
         #self.bn1 = torch.nn.BatchNorm1d(hidden_dim)
         #self.bn2 = nn.BatchNorm1d(hidden_dim)
