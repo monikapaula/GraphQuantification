@@ -129,7 +129,7 @@ if __name__ == '__main__':
     args = parse_args()
     all_experiments = []
     timestamp= datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
-    path = Path(__file__).parent / f"results/quantification_results_{timestamp}csv"
+    path = Path(__file__).parent / f"results/quantification_results_{timestamp}.csv"
     path.parent.mkdir(parents=True, exist_ok=True)
 
     for dataset in args.datasets:
