@@ -3,7 +3,7 @@ import numpy as np
 import quapy as qp
 import argparse
 import pandas as pd
-import torch
+import datetime
 
 from quapy.data import LabelledCollection
 from quapy.method.aggregative import CC,ACC, PCC, PACC, KDEyML
@@ -128,7 +128,8 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     all_experiments = []
-    path = Path(__file__).parent / "results/quantification_results.csv"
+    timestamp= datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
+    path = Path(__file__).parent / f"results/quantification_results_.{timestamp}csv"
     path.parent.mkdir(parents=True, exist_ok=True)
 
     for dataset in args.datasets:
