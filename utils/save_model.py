@@ -19,5 +19,4 @@ def save_model(model, config, dataset_name, split_name= None):
         'dataset_name': dataset_name,
         'split_name': split_name,
     }
-
     torch.save(config, save_path)

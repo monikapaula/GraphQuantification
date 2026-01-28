@@ -64,7 +64,7 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
     true_prev = test_set.prevalence()
 
     #plot_probability_distribution(wrapper, val_indices, title="Validation Set Probabilities")
-    #print(f"\nTrue prevalence: {np.round(test_set.prevalence(), 4)}")
+    print(f"\nTrue prevalence: {np.round(test_set.prevalence(), 4)}")
 
     for name, quantifier in quantifiers.items():
         quantifier.fit(val_set.instances, val_set.labels)
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     args = parse_args()
     all_experiments = []
     timestamp= datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
-    path = Path(__file__).parent / f"results/quantification_results_.{timestamp}csv"
+    path = Path(__file__).parent / f"results/quantification_results_{timestamp}csv"
     path.parent.mkdir(parents=True, exist_ok=True)
 
     for dataset in args.datasets:
@@ -140,8 +140,9 @@ if __name__ == '__main__':
                     all_experiments.extend(result)
                     df_step = pd.DataFrame(result)
                     df_step.to_csv(path, mode='a', index=False, header=not path.exists())
-                except:
+
+                except FileNotFoundError:
                     continue
-
-
+                except Exception as e:
+                    print(f"QUANTIFICATION failed {e}")
 

@@ -18,6 +18,7 @@ class GCN(nn.Module):
         self.conv2 = GCNConv(hidden_dim, hidden_dim, bias=use_bias)
         #self.conv3 = GCNConv(hidden_dim, out_dim, bias=use_bias) ogbn
         self.linear1 = nn.Linear(hidden_dim,out_dim, bias=use_bias) #ogbn
+        #self.linear2 = nn.Linear(hidden_dim,out_dim, bias=use_bias)
         self.dropout = nn.Dropout(p=dropout)
         #self.bn1 = nn.BatchNorm1d(hidden_dim) ogbn
         #self.bn2 = nn.BatchNorm1d(hidden_dim) ogbn

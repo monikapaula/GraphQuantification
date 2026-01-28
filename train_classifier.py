@@ -120,7 +120,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
         print(f"Classifier MAE on test set: {mae:.4f}")
 
     if config.get('save_model', False):
-        os.makedirs('quantification/saved_models', exist_ok=True)
+        os.makedirs('saved_models', exist_ok=True)
         save_model(model, config, dataset_name=run_name, split_name=SPLIT_NAME)
 
 
