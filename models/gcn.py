@@ -17,8 +17,8 @@ class GCN(nn.Module):
         self.conv1 = GCNConv(in_dim, hidden_dim, use_bias, bias=use_bias)
         self.conv2 = GCNConv(hidden_dim, hidden_dim, bias=use_bias)
         self.conv3 = GCNConv(hidden_dim, out_dim, bias=use_bias)
-        self.linear1 = nn.Linear(hidden_dim,out_dim, bias=use_bias) #ogbn
-        self.linear2 = nn.Linear(hidden_dim,out_dim, bias=use_bias)
+        #self.linear1 = nn.Linear(hidden_dim,out_dim, bias=use_bias) #ogbn
+        #self.linear1 = nn.Linear(hidden_dim,out_dim, bias=use_bias)
         self.dropout = nn.Dropout(p=dropout)
         self.bn1 = nn.BatchNorm1d(hidden_dim)
         self.bn2 = nn.BatchNorm1d(hidden_dim)
@@ -40,5 +40,5 @@ class GCN(nn.Module):
         x = self.dropout(x)
 
         x = self.conv3(x, edge_index)
-        x = self.linear1(x)
+        #x = self.linear1(x)
         return F.log_softmax(x, dim=1)
