@@ -16,6 +16,7 @@ from utils.metrics import classifier_mae, extensive_evaluate, class_balance, mac
 from models.gcn import GCN
 from models.mlp import MLP
 from models.graphSage import SAGE
+from models.gcnh import GCNH
 #from utils.focal_loss import FocalLoss
 from utils.save_model import save_model
 from utils.early_stopping import EarlyStopper
@@ -27,7 +28,8 @@ MODEL_CONFIG = {
     'output_dim': None,
     'dropout': 0.2,
     'lr': 0.01,
-    'save_model': True
+    'save_model': True,
+    'nlayers': 3
 }
 
 def load_model(config:dict):
@@ -36,6 +38,7 @@ def load_model(config:dict):
     hidden_dim = config['hidden_dim']
     output_dim = config['output_dim']
     dropout = config['dropout']
+    nlayers = config.get('nlayers', 2)
 
     if name == 'GCN':
         return GCN(in_dim, hidden_dim, output_dim,dropout)
@@ -43,6 +46,12 @@ def load_model(config:dict):
         return MLP(in_dim, hidden_dim, output_dim,dropout)
     elif name == 'SAGE':
         return SAGE(in_dim, hidden_dim, output_dim,dropout)
+    elif name == 'GCNH':
+        return GCNH(nfeat=in_dim,
+            nhid=hidden_dim,
+            nclass=output_dim,
+            dropout=dropout,
+            nlayers=nlayers)
     else:
         raise ValueError(f"Model {name} not recognized.")
 
@@ -132,7 +141,7 @@ if __name__ == '__main__':
     parser.add_argument('--datasets', type=str, nargs= '+', choices=['deezer_europe', 'presidential_election', 'twitch_gamers', 'ogbn_arxiv'],
                         help='Name of datasets')
     parser.add_argument('--splits', type=str, nargs='+')
-    parser.add_argument('--models', type=str, nargs='+', choices=['GCN', 'MLP','SAGE'])
+    parser.add_argument('--models', type=str, nargs='+', choices=['GCN', 'MLP','SAGE', 'GCNH'])
     parser.add_argument('--epochs', type=int, default=300)
     args = parser.parse_args()
 
