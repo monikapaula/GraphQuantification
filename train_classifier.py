@@ -205,10 +205,10 @@ if __name__ == '__main__':
                 results_table.append([DATASET, SPLIT_NAME, MODEL_NAME, f"{macro_f1_score:.4f}"])
 
 
-    headers = ["Dataset", "Split", "Model", "Macro F1"]
-    df = pd.DataFrame(results_table, columns=headers)
-    file_exists = os.path.isfile(output_file)
-    df.to_csv(output_file, mode='a', index=False, header=not file_exists)
+                headers = ["Dataset", "Split", "Model", "Macro F1"]
+                df = pd.DataFrame(results_table, columns=headers)
+                file_exists = os.path.isfile(output_file)
+                df.to_csv(output_file, mode='a', index=False, header=not file_exists)
 
 
     #print(f"\n--- Split Distribution ---")
