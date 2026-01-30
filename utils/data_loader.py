@@ -5,6 +5,8 @@ import json
 
 from pathlib import Path
 
+from models.gcnh import GCNH
+
 DATA_ROOT = Path(__file__).parent.parent.resolve()
 print(DATA_ROOT)
 
@@ -84,6 +86,7 @@ def load_model(dataset_name, model_type, split_name, model_config, device='cpu')
     hidden_dim = model_config['hidden_dim']
     output_dim = model_config['output_dim']
     dropout = model_config.get('dropout', 0.5)
+    n_layers = model_config.get('nlayers', 3)
     model_type = model_config.get('name', model_type).upper()
 
     if model_type == 'GCN':
@@ -95,6 +98,12 @@ def load_model(dataset_name, model_type, split_name, model_config, device='cpu')
     elif model_type == 'SAGE':
         from models.graphSage import SAGE
         model = SAGE(input_dim, hidden_dim, output_dim, dropout)
+    elif model_type == 'GCNH':
+        model = GCNH(nfeat=input_dim,
+        nhid=hidden_dim,
+        nclass=output_dim,
+        dropout=dropout,
+        nlayers=n_layers)
     else:
         raise ValueError(f"Model {model_type} not recognized.")
 
