@@ -15,9 +15,9 @@ This repository provides a comprehensive pipeline for training Graph Neural Netw
 
 ## Installation
 
-Ensure you have python 3.8+ and the necessary libraries installed:
+Ensure you have python 3.10+ and the necessary libraries installed:
 ```
-pip install -r requirements.txr
+pip install -r requirements.txt
 ```
 This project uses Git LFS to manage large Pytorch ```.pt``` files and dataset splits. To install Git LFS and pull the files run the following commmands:
 ```
