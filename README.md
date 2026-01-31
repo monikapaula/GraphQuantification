@@ -40,6 +40,8 @@ The project presents four datasets each with a variety of feature-based distribu
 python utils/dataset_manager.py 
 ```
 
+**Note**: This step is not required to run the experiments. The experiment pipeline utilizes pre-computed masks included in the repository. You only need to run this script if you wish to access or inspect the original source datasets.
+
 ## How to Run
 ### Training Classifiers
 The train.py script trains a selected model on a specific dataset and split. 
