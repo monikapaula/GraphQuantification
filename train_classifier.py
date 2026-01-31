@@ -51,7 +51,8 @@ def load_model(config:dict):
             nhid=hidden_dim,
             nclass=output_dim,
             dropout=dropout,
-            nlayers=nlayers)
+            nlayers=nlayers,
+            maxpool=False)
     else:
         raise ValueError(f"Model {name} not recognized.")
 
@@ -65,7 +66,7 @@ def evaluate(model, x, edge_index, mask, y):
     return acc
 
 
-def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, class_weights=None, dataset_name=None):
+def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, class_weights=None):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     config['input_dim'] = x.size(1)
@@ -84,17 +85,14 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
     best_val_metric = -float('inf')
 
     for epoch in range(args.epochs):
-        #Training step
         model.train()
         optimizer.zero_grad()
 
-        #output the log-probabilities
         log_probabilities = model(x, edge_index)
         loss = criterion(log_probabilities[train_mask], y[train_mask])
         loss.backward()
         optimizer.step()
 
-        # Evaluation
         model.eval()
         with torch.no_grad():
             out_val = model(x, edge_index)
@@ -131,8 +129,6 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
     if config.get('save_model', False):
         os.makedirs('saved_models', exist_ok=True)
         save_model(model, config, dataset_name=run_name, split_name=SPLIT_NAME)
-
-
 
     return test_acc
 
@@ -190,20 +186,10 @@ if __name__ == '__main__':
                     val_mask=val_mask,
                     test_mask=test_mask,
                     class_weights=weights,
-                    dataset_name=run_name
                 )
                 y = data.y
-                #class_balance(y, train_mask, "TRAIN")
-                #class_balance(y, val_mask, "VAL")
-                #class_balance(y, test_mask, "TEST")
-
-                total_nodes = data.num_nodes
-                train_pct = (train_mask.sum().item() / total_nodes) * 100
-                val_pct = (val_mask.sum().item() / total_nodes) * 100
-                test_pct = (test_mask.sum().item() / total_nodes) * 100
 
                 results_table.append([DATASET, SPLIT_NAME, MODEL_NAME, f"{macro_f1_score:.4f}"])
-
 
                 headers = ["Dataset", "Split", "Model", "Macro F1"]
                 df = pd.DataFrame(results_table, columns=headers)
@@ -211,9 +197,3 @@ if __name__ == '__main__':
                 df.to_csv(output_file, mode='a', index=False, header=not file_exists)
 
 
-    #print(f"\n--- Split Distribution ---")
-    #print(f"Total Nodes: {total_nodes}")
-    #print(f"Train Size: {train_mask.sum().item():>6} ({train_pct:.2f}%)")
-    #print(f"Val Size:   {val_mask.sum().item():>6} ({val_pct:.2f}%)")
-    #print(f"Test Size:  {test_mask.sum().item():>6} ({test_pct:.2f}%)")
-    #print("-" * 35 + "\n")

@@ -103,7 +103,8 @@ def load_model(dataset_name, model_type, split_name, model_config, device='cpu')
         nhid=hidden_dim,
         nclass=output_dim,
         dropout=dropout,
-        nlayers=n_layers)
+        nlayers=n_layers,
+        maxpool=False)
     else:
         raise ValueError(f"Model {model_type} not recognized.")
 
