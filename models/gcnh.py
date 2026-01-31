@@ -5,6 +5,9 @@ from torch_scatter import scatter
 
 
 class GCNHLayer(nn.Module):
+    """
+    from the paper "GCNH: A Simple Method For Representation Learning On Heterophilous Graphs, 2023", [https://github.com/SmartData-Polito/GCNH]
+    """
     def __init__(self, nfeat, nhid, maxpool=False):
         super(GCNHLayer, self).__init__()
         self.nhid = nhid
