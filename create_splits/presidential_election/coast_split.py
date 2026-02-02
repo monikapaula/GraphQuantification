@@ -12,12 +12,7 @@ def create_coast_split(features_df):
     }
 
     test_states = {
-        'alaska', 'florida', 'california', 'louisiana', 'newyork',
-        'illinois', 'newjersey', 'virginia', 'washington', 'massachusetts',
-        'maryland', 'minnesota', 'oregon', 'connecticut', 'hawaii',
-        'delaware', 'southcarolina', 'rhodeisland', 'vermont', 'maine',
-        'newmexico', 'newhampshire', 'districtofcolumbia', 'texas',
-        'alabama', 'mississippi'
+         'alaska', 'california', 'connecticut', 'delaware', 'districtofcolumbia', 'florida', 'hawaii', 'louisiana', 'maine', 'maryland', 'massachusetts', 'michigan', 'montana', 'newhampshire', 'newjersey', 'newmexico', 'newyork', 'northdakota', 'ohio', 'oregon', 'pennsylvania', 'rhodeisland', 'southcarolina', 'texas', 'vermont', 'virginia', 'washington', 'wisconsin', 'alabama', 'mississippi'
     }
     num_nodes = len(features_df)
     all_states = set(features_df['state'].unique())
