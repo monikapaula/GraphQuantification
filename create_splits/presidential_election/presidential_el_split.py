@@ -136,7 +136,16 @@ def get_dataset(split_name):
 
 if __name__ == '__main__':
     save_splits_pt()
-    data, train_mask, val_mask, test_mask = get_dataset(split_name='split_3')
+    data, train_mask, val_mask, test_mask = get_dataset(split_name='split_2')
     print("size training:", train_mask.sum())
     print("size val:", val_mask.sum())
     print("size test:", test_mask.sum())
+
+    for name, mask in [("TRAIN", train_mask), ("VAL", val_mask), ("TEST", test_mask)]:
+        y_sub = data.y[mask]
+        total = len(y_sub)
+        rep_count = int(y_sub.sum().item())
+        dem_count = total - rep_count
+
+        print(
+            f"{name:<15} | {total:<10} | {dem_count} ({dem_count / total:.2%}) | {rep_count} ({rep_count / total:.2%}) |")

@@ -11,8 +11,9 @@ def create_geographic_split(features_df, VALIDATION_RATIO):
     rng = np.random.default_rng(seed=42)
 
     north_states = {
-        'washington', 'oregon', 'kansas', 'california', 'idaho'
-        'minnesota','wyoming', 'northdakota', 'southdakota', 'nebreaska','wisconsin', 'michigan', 'illinois', 'colorado', 'iowa', 'indiana', 'ohio'
+        'washington', 'oregon', 'kansas', 'idaho', 'montana',
+        'minnesota','wyoming', 'northdakota', 'southdakota', 'nebraska','wisconsin', 'michigan',
+        'illinois', 'colorado', 'iowa', 'indiana', 'ohio',
         'newyork', 'newjersey', 'pennsylvania', 'vermont', 'newhampshire',
         'massachusetts', 'connecticut', 'rhodeisland', 'maine',
         'maryland', 'delaware', 'districtofcolumbia', 'virginia'

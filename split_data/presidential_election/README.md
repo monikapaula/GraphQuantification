@@ -25,9 +25,9 @@ Train on non_Eastern states, test on Eastern states
 
 | Dataset Split | Total Samples | Class 0 (Democrat) | Class 1 (Republican) |
 | :--- |:--------------|:-------------------|:---------------------|
-| **TRAIN** | 1,741         | 245 (14.07%)       | **1,496 (85.93%)**   |
-| **VAL** | 193           | 22 (11.40%)        | 171 (88.60%)         |
-| **TEST** | 1,207         | 286 (23.70%)       | **921 (76.30%)**     |
+| **TRAIN** | 1,406         | 217 (15.43%)       | **1,189 (84.57%)**   |
+| **VAL** | 156           | 32 (20.51%)        | 124 (79.49%)         |
+| **TEST** | 1,579         | 304 (19.25%)       | **1275 (80.75%)**    |
 
 
 ## split_2: coastal
@@ -35,9 +35,9 @@ Train on interior states (mostly Republican) and test on coastal states (more De
 
 | Dataset Split | Total Samples | Class 0 (Democrat) | Class 1 (Republican) |
 | :--- |:--------------|:-------------------|:---------------------|
-| **TRAIN** | 1,961         | 184 (9.38%)        | **1,777 (90.62%)**   |
+| **TRAIN** | 1,571         | 127 (8.08%)        | **1,444 (91.92%)**   |
 | **VAL** | 291           | 62 (21.31%)        | 229 (78.69%)         |
-| **TEST** | 889           | 307 (34.53%)       | **582 (65.46%)**      |
+| **TEST** | 1,279         | 364 (28.46%)       | **915 (71.54%)**     |
 
 ## split_3: metropolitan 
 Create a split based on population/ density to simulate metropolitan vs non-metropolitan areas
