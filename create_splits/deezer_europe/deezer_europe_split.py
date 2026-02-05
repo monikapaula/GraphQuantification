@@ -1,6 +1,8 @@
 import torch
+import scipy.sparse as sp
 from sklearn.decomposition import TruncatedSVD
-from sklearn.preprocessing import MultiLabelBinarizer, Normalizer
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.preprocessing import MultiLabelBinarizer, Normalizer, StandardScaler
 from torch_geometric.data import Data
 import numpy as np
 
@@ -28,11 +30,11 @@ def load_data():
     features_df, edges_df, target_df = load_deezer_europe(cfg)
     return features_df, edges_df, target_df
 
-def svd_embeddings(features_df, embed_dim=256):
+def svd_embeddings(features_df, edges_df, embed_dim=1024):
     """
     creates user embeddings using TruncatedSVD
     """
-
+    rw = 3
     user_ids = [int(u) for u in features_df.keys()]
     num_users = max(user_ids) + 1
 
@@ -49,22 +51,45 @@ def svd_embeddings(features_df, embed_dim=256):
     user_artist_matrix = mlb.fit_transform(valid_artists)
     user_artist_matrix = user_artist_matrix.astype(np.float64)
 
+    tfidf = TfidfTransformer()
+    weighted = tfidf.fit_transform(user_artist_matrix)
     svd = TruncatedSVD(n_components=embed_dim, algorithm='arpack', random_state=42)
-    X_emb = svd.fit_transform(user_artist_matrix)
-
-    scaler = Normalizer(norm='l2')
-    X_emb = scaler.fit_transform(X_emb)
+    X_emb = svd.fit_transform(weighted)
 
     X_embeddings = np.zeros((num_users, embed_dim + 1), dtype=np.float32)
     X_embeddings[valid_indices, :embed_dim] = X_emb
     X_embeddings[valid_indices, -1] = 1.0
 
-    return X_embeddings
+    edge_index = edges_df.values
+    adj = sp.coo_matrix((np.ones(len(edge_index)), (edge_index[:, 0], edge_index[:, 1])),
+                        shape=(num_users, num_users))
+    adj = adj + adj.T
+    degrees = np.array(adj.sum(axis=1)).flatten()
+    log_degrees = np.log1p(degrees).reshape(-1,1)
+
+    X_embeddings = np.zeros((num_users, embed_dim + 1), dtype=np.float32)
+    X_embeddings[valid_indices, :embed_dim] = X_emb
+    X_embeddings[valid_indices, -2] = 1.0
+    X_embeddings[:, -1]= log_degrees.flatten()
+
+    d_inv = sp.diags(1.0 / np.maximum(degrees, 1.0))
+    a_tilde = d_inv @ adj
+
+    X_propagated = X_embeddings.copy()
+    for _ in range(rw):
+        X_propagated = a_tilde @ X_propagated
+
+    scaler = StandardScaler()
+    X_emb = scaler.fit_transform(X_propagated)
+    var = svd.explained_variance_ratio_.sum()
+    print(f"SVD Explained Variance (dim={embed_dim}): {var:.2%}")
+
+    return X_emb
 
 def save_splits_pt():
     features_df, edges_df, target_df = load_data()
 
-    X_np = svd_embeddings(features_df, embed_dim=256)
+    X_np = svd_embeddings(features_df, edges_df, embed_dim=1024)
     X_tensor = torch.from_numpy(X_np).float()
 
     Y_np = target_df.sort_values('id')['target'].values
@@ -107,8 +132,8 @@ def get_dataset(split_name):
 
 if __name__ == "__main__":
     save_splits_pt()
-    features, _, _ = load_data()
-    embeddings = svd_embeddings(features, embed_dim=256)
+    features, edges, _ = load_data()
+    embeddings = svd_embeddings(features,edges, embed_dim=1024)
     data, train_mask, val_mask, test_mask = get_dataset("split_1")
     y = data.y
     class_balance(y, train_mask, "TRAIN")
