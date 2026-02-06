@@ -80,7 +80,7 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
         class_weights = class_weights.to(device)
 
     criterion = nn.NLLLoss(weight=class_weights)
-    early_stopper = EarlyStopper(patience=100, min_delta=0.001 )
+    early_stopper = EarlyStopper(patience=200, min_delta=0.001 )
     best_model_state = None
     best_val_metric = -float('inf')
 
