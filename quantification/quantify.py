@@ -83,7 +83,7 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
         })
 
     if run_sis:
-        conf_dir = "confusion_matrix"
+        conf_dir = os.path.join("quantification_results", "confusion_matrix")
         os.makedirs(conf_dir, exist_ok=True)
         for mode in ['acc', 'pacc']:
             name = f"SIS-{mode.upper()}"

@@ -5,6 +5,7 @@ _MACOSX/
 .AppleDouble
 *.csv.gz
 *.pyc
+utils/*.csv
 saved_models/
 __pycache__/
 data/*
