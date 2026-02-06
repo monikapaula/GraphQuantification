@@ -16,6 +16,7 @@ from create_splits.split_manager import load_split
 from quantification.wrapper import WrapperClassifier
 from utils.sis import compute_confusion, quantification_ppr
 from utils.metrics import kl_divergence,plot_probability_distribution
+from sklearn.metrics import confusion_matrix
 
 def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
     BASE_DIR = 'split_data'
@@ -46,6 +47,38 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
 
     val_set = LabelledCollection(val_indices, val_y, classes=classes)
     test_set = LabelledCollection(test_indices, test_y, classes=classes)
+
+    print(f"ANALYSIS: {DATASET_NAME} | Split: {SPLIT_NAME}")
+    val_preds = wrapper.predict(val_set.instances)
+    test_preds = wrapper.predict(test_set.instances)
+
+    cm_val = confusion_matrix(val_set.labels, val_preds)
+    print(f"\nConfusion Matrix (Validation):\n{cm_val}")
+    p_true = test_set.prevalence()
+    p_hat = np.bincount(test_preds, minlength=num_classes) / len(test_preds)
+    print(f"\nTrue Prevalence p(y):      {np.round(p_true, 4)}")
+    print(f"Predicted Prev. p(y_hat): {np.round(p_hat, 4)} ")
+
+    M = cm_val.astype('float') / cm_val.sum(axis=1)[:, np.newaxis]
+    try:
+        # Löse M.T * p_corr = p_hat
+        p_corr = np.linalg.solve(M.T, p_hat)
+        p_corr = np.clip(p_corr, 0, 1)
+        p_corr /= p_corr.sum()
+        print(f"Corrected Prev. (ACC):    {np.round(p_corr, 4)}")
+
+        mae_raw = np.abs(p_true - p_hat).mean()
+        mae_corr = np.abs(p_true - p_corr).mean()
+        print(f"\nMAE Raw: {mae_raw:.44f}")
+        print(f"MAE Corrected: {mae_corr:.4f}")
+
+        if mae_corr > mae_raw:
+            print("ACHTUNG: Korrektur war SCHÄDLICH (MAE gestiegen).")
+    except np.linalg.LinAlgError:
+        print("\nMatrix singulär - Gleichungssystem nicht lösbar.")
+
+    print(f"{'=' * 40}\n")
+
     param_grid = {'bandwidth': [0.1,0.15,0.2]}
 
     if num_classes <= 2:

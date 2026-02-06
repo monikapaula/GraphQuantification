@@ -12,7 +12,7 @@ from create_splits.deezer_europe.deezer_europe_split import get_dataset as get_d
 from create_splits.twitch_gamers.twitch_gamers_split import get_dataset as get_twitch_gamers_dataset
 from create_splits.ogbn_arxiv.ogbn_arxiv_split import get_dataset as get_ogbn_arxiv_dataset
 
-from utils.metrics import classifier_mae, extensive_evaluate, class_balance, macro_f1, compute_class_weights
+from utils.metrics import classifier_mae, extensive_evaluate, class_balance, macro_f1, compute_class_weights, print_confusion_matrix
 from models.gcn import GCN
 from models.mlp import MLP
 from models.graphSage import SAGE
@@ -101,8 +101,8 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
             train_acc = evaluate(model, x, edge_index, train_mask, y)
             val_macro_f1 = macro_f1(model, x, edge_index, val_mask, y)
 
-        if epoch % 10 == 0 or epoch == 0:
-            print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
+        #if epoch % 10 == 0 or epoch == 0:
+            #print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
 
         if val_macro_f1 > best_val_metric:
             best_val_metric = val_macro_f1
@@ -114,23 +114,29 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
         model.load_state_dict(best_model_state)
 
     # evaluation on test set using F1 and MAE
-    test_acc = extensive_evaluate(model, x, edge_index, test_mask,y)
-    print(f"Macro F1-Score: {test_acc:.4f}")
+    #test_acc = extensive_evaluate(model, x, edge_index, test_mask,y)
+
+    print(f"\n--- FINAL EVALUATION (Confusion Matrices) ---")
+    print_confusion_matrix(model, x, edge_index, train_mask, y, "TRAIN")
+    print_confusion_matrix(model, x, edge_index, val_mask, y, "VALIDATION")
+    print_confusion_matrix(model, x, edge_index, test_mask, y, "TEST")
 
     with torch.no_grad():
+        test_f1 = macro_f1(model, x, edge_index, test_mask, y)
         out = model(x, edge_index)
         pred = out.argmax(dim=1)
         y_true = y[test_mask].cpu().numpy()
         y_pred = pred[test_mask].cpu().numpy()
 
         mae, true_prev, pred_prev = classifier_mae(y_pred, y_true)
+        print(f"Macro-F1 on test set: {test_f1:.4f}")
         print(f"Classifier MAE on test set: {mae:.4f}")
 
     if config.get('save_model', False):
         os.makedirs('saved_models', exist_ok=True)
         save_model(model, config, dataset_name=run_name, split_name=SPLIT_NAME)
 
-    return test_acc
+    return test_f1
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train classifier model')

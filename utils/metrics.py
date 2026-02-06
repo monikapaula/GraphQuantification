@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-from sklearn.metrics import mean_squared_error, confusion_matrix, classification_report, f1_score
+from sklearn.metrics import confusion_matrix, classification_report, f1_score
 
 def compute_class_weights(y):
     """
@@ -109,3 +109,14 @@ def kl_divergence(p,q ):
 
     divergence = float(np.sum(p * np.log(p/q)))
     return divergence
+
+def print_confusion_matrix(model, x, edge_index, mask, y, set):
+    model.eval()
+    with torch.no_grad():
+        out = model(x, edge_index)
+        pred = out[mask].argmax(dim=1).cpu().numpy()
+        true = y[mask].cpu().numpy()
+        cm = confusion_matrix(true, pred)
+        print(f"\nConfusion Matrix ({set}):")
+        print(cm)
+        return cm
