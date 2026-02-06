@@ -1,10 +1,11 @@
-# Deezer_europe splits 
+# Deezer Europe 
+
+Task: Quantifying the gender across splits.
 
 The Deezer Europe dataset consists of 28,281 users with a base gender distribution of:
 - Class 0 (Female): 15743
 - Class 1 (male): 12538
 
-The task is to quantify the gender across splits.
 
 ## 1. Gender-Biased Splits (Artist Preference): 
 

@@ -1,4 +1,4 @@
-# Presidential_election
+# Presidential Election
 
 Task: Predicting county-level voting outcomes (Democrat vs. Republican) in US elections.
 
