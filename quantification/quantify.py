@@ -4,6 +4,7 @@ import quapy as qp
 import argparse
 import pandas as pd
 import datetime
+import warnings
 
 from quapy.data import LabelledCollection
 from quapy.method.aggregative import CC,ACC, PCC, PACC, KDEyML
@@ -18,6 +19,7 @@ from utils.sis import compute_confusion, quantification_ppr
 from utils.metrics import kl_divergence,plot_probability_distribution
 
 def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
+    warnings.filterwarnings("ignore", category=FutureWarning, message=".*weights_only=False.*")
     BASE_DIR = 'split_data'
     DEVICE = 'cpu'
 
@@ -55,10 +57,10 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
 
     quantifiers = {
         'CC': CC(wrapper,fit_classifier=False),
-        'ACC': ACC(wrapper, fit_classifier=False),
+        'ACC': ACC(wrapper, fit_classifier=False, val_split=None),
         'PCC': PCC(wrapper, fit_classifier=False),
-        'PACC': PACC(wrapper, fit_classifier=False),
-        'KDEy': GridSearchQ(model= KDEyML(wrapper, fit_classifier=False), param_grid=param_grid,protocol=val_protocol,error='mae', refit=True)
+        'PACC': PACC(wrapper, fit_classifier=False, val_split=None),
+        'KDEy': GridSearchQ(model= KDEyML(wrapper, fit_classifier=False, val_split=None), param_grid=param_grid,protocol=val_protocol,error='mae', refit=True)
     }
     run_results = []
     true_prev = test_set.prevalence()
@@ -71,7 +73,7 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
         est_prev = quantifier.quantify(test_set.instances)
         mae = qp.error.mae(test_set.prevalence(), est_prev)
         kl= kl_divergence(true_prev, est_prev)
-        #print(f"{name}: Estimated = {np.round(est_prev, 4)}\tMAE = {mae:.4f}\tKL = {kl:.4f}")
+        print(f"{name}: Estimated = {np.round(est_prev, 4)}\tMAE = {mae:.4f}\tKL = {kl:.4f}")
 
         run_results.append({
             'Dataset': DATASET_NAME,
