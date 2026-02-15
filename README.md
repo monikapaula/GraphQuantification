@@ -55,21 +55,21 @@ python train_classifier.py --dataset <dataset_name> --splits <split_1> <split_2>
 ```
 
 ### Configuration options:
-* --dataset: Name of the dataset (e.g., presidential_election, twitch_gamers, deezer_europe, ogbn_arxiv)
+* --datasets: Name of the dataset (e.g., presidential_election, twitch_gamers, deezer_europe, ogbn_arxiv)
 * --splits: One or more split names to iterate through
 * --models: List of architectures to train (GCN, SAGE, MLP)
-* --epochs: number of training epochs
+* --epochs: Number of training epochs
 
 ### Quantification 
 Once models are trained, use quantify.py to estimate class prevalence in the test set. This phase supports standard aggregative quantifiers and custom graph-based SIS methods
 ```
-python quantify.py --datasets <dataset_name> --models GCN --splits <split_name> --run_sis
+python quantification/quantify.py --datasets <dataset_name> --models GCN --splits <split_name> --run_sis
 ```
 ### Configuration options:
-* --dataset: Name of the dataset (e.g., presidential_election, twitch_gamers, deezer_europe, ogbn_arxiv)
+* --datasets: Name of the datasets (e.g., presidential_election, twitch_gamers, deezer_europe, ogbn_arxiv)
 * --models: List of architectures to train (GCN, SAGE, MLP)
 * --splits: One or more split names to iterate through
-* --run_sis: flag to run SIS-ACC/PACC
+* --run_sis: Flag to run SIS-ACC/PACC
 
 
 
