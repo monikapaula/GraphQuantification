@@ -6,6 +6,7 @@ _MACOSX/
 *.csv.gz
 *.pyc
 utils/gephicsv/
+utils/quantification_plot
 utils/tocsv.ipynb
 saved_models/
 __pycache__/

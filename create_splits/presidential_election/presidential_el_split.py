@@ -51,12 +51,9 @@ def load_data():
         feature_filename= CONFIG['feature_filename'],
         edges_filename=CONFIG['edges_filename'],
     )
-    #print(features_df.columns)
-    #print(len(features_df.columns))
     return features_df, edges_df
 
 def encode_labels(features_df):
-    #1: Republican, 0: Democrat
     encoder = LabelEncoder()
     encoded_labels = encoder.fit_transform(features_df['Label (County)'].values)
     return encoded_labels
