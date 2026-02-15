@@ -21,7 +21,7 @@ pip install -r requirements.txt
 ```
 This project uses Git LFS to manage large Pytorch ```.pt``` files and dataset splits. 
 
-[IMPORTANT] You must have Git LFS installed on your system before cloning or pulling. If you don't have it, follow the [official installation guide here](https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage).
+[IMPORTANT] You must have Git LFS installed on your system before pulling. If you don't have it, follow the [official installation guide here](https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage).
 
 Once installed, run the following commands to download the data:
 ```
@@ -51,7 +51,7 @@ python utils/dataset_manager.py
 The train.py script trains a selected model on a specific dataset and split. 
 
 ```
-python train.py --dataset <dataset_name> --splits <split_1> <split_2> --models  MLP GCN SAGE --epochs 300
+python train_classifier.py --dataset <dataset_name> --splits <split_1> <split_2> --models  MLP GCN SAGE --epochs 300
 ```
 
 ### Configuration options:
