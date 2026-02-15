@@ -7,6 +7,7 @@ _MACOSX/
 *.pyc
 utils/gephicsv/
 utils/tocsv.ipynb
+utils/latex_table.ipynb
 saved_models/
 __pycache__/
 data/*
