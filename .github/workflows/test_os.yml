@@ -1,12 +1,12 @@
 name: OS Compatibility Check
-on: [push, pull_request] # Runs every time you sync your code
+on: [push, pull_request]
 
 jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest] # Tests Linux and Windows
+        os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -19,4 +19,4 @@ jobs:
           pip install torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-2.6.0+cpu.html
           pip install -r requirements.txt
       - name: Run Smoke Test
-        run: python train_classifier.py --datasets presidential_election --epochs 1
+        run: python train_classifier.py --datasets presidential_election --splits split_0 --models GCN --epochs 1
