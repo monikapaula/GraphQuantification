@@ -10,6 +10,7 @@ This repository provides a comprehensive pipeline for training Graph Neural Netw
     * [Phase 1: Training Classifiers](#training-classifiers)
     * [Phase 2: Quantification](#quantification)
 4. [Results](#results)
+5. [Project Structure](#project-structure)
 <!-- TOC -->
 
 
