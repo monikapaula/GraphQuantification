@@ -14,4 +14,5 @@ data/*
 !data/presidential_election/
 quantification/results/
 quantification/confusion_matrix/
+.github/workflows/
 RELEASE_v1.txt

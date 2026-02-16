@@ -16,7 +16,17 @@ This repository provides a comprehensive pipeline for training Graph Neural Netw
 ## Installation
 
 Ensure you have python 3.10+ and the necessary libraries installed:
+
+**Windows or Linux**
 ```
+pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+pip install torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-2.6.0+cpu.html
+pip install -r requirements.txt
+```
+**MacOS**
+```
+pip install torch==2.6.0
+pip install torch-scatter torch-sparse
 pip install -r requirements.txt
 ```
 This project uses Git LFS to manage large Pytorch ```.pt``` files and dataset splits. 
