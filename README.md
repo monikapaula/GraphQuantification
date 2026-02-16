@@ -48,10 +48,10 @@ python utils/dataset_manager.py
 
 ## How to Run
 ### Training Classifiers
-The train.py script trains a selected model on a specific dataset and split. 
+The train_classifier.py script trains a selected model on a specific dataset and split. 
 
 ```
-python train_classifier.py --dataset <dataset_name> --splits <split_1> <split_2> --models  MLP GCN SAGE --epochs 300
+python train_classifier.py --datasets <dataset_name> --splits <split_1> <split_2> --models  MLP GCN SAGE --epochs 300
 ```
 
 ### Configuration options:
@@ -102,9 +102,9 @@ presidential_election,temporal_shift,GCN,PACC,0.0342
 │   ├── twitch_gamers/
 │   └── ...
 ├── models/                 # Model architectures (GCN, GraphSAGE, MLP)
-├── utils/                  # Helper functions (Metrics, DataLoaders, EarlyStopping)
+├── utils/                  # Helper functions (Metrics, DataLoaders, SIS)
 ├── split_data/             # Processed datasets and split-specific READMEs
 └── quantification/         # Quantification logic and evaluation
     ├── quantify.py         # Main quantification pipeline script
-    └── results/            # Directory for experiment outputs and logs 
+    └── results/            # Directory for experiment outputs 
 ```
