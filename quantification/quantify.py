@@ -4,6 +4,7 @@ import quapy as qp
 import argparse
 import pandas as pd
 import datetime
+import logging
 
 from quapy.data import LabelledCollection
 from quapy.method.aggregative import CC,ACC, PCC, PACC, KDEyML
@@ -17,10 +18,16 @@ from quantification.wrapper import WrapperClassifier
 from utils.sis import compute_confusion, quantification_ppr
 from utils.metrics import kl_divergence,plot_probability_distribution
 from sklearn.metrics import confusion_matrix
+from tabulate import tabulate
 
-def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
+def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, app_logger, run_sis = False):
     BASE_DIR = 'split_data'
     DEVICE = 'cpu'
+
+    header = f"\n{'=' * 60}\n" \
+             f"DATASET: {DATASET_NAME} | SPLIT: {SPLIT_NAME} | MODEL: {CLASSIFIER_MODEL}\n" \
+             f"{'=' * 60}"
+    app_logger.info(header)
 
     data = load_data_object(DATASET_NAME, base_dir=BASE_DIR, split_name=SPLIT_NAME)
     num_nodes = data.num_nodes
@@ -35,86 +42,40 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
     wrapper.fit()
 
     train_mask, val_mask, test_mask = load_split(DATASET_NAME, SPLIT_NAME, num_nodes)
-
-    all_indices = np.arange(num_nodes)
     classes = np.unique(data.y.cpu().numpy())
     num_classes = len(classes)
 
-    val_indices = all_indices[val_mask]
-    test_indices = all_indices[test_mask]
     val_y = data.y[val_mask].cpu().numpy()
     test_y = data.y[test_mask].cpu().numpy()
+    val_set = LabelledCollection(np.arange(num_nodes)[val_mask], val_y, classes=classes)
+    test_set = LabelledCollection(np.arange(num_nodes)[test_mask], test_y, classes=classes)
 
-    val_set = LabelledCollection(val_indices, val_y, classes=classes)
-    test_set = LabelledCollection(test_indices, test_y, classes=classes)
-
-    print(f"ANALYSIS: {DATASET_NAME} | Split: {SPLIT_NAME}")
     val_preds = wrapper.predict(val_set.instances)
     test_preds = wrapper.predict(test_set.instances)
-
     cm_val = confusion_matrix(val_set.labels, val_preds)
-    cm_test= confusion_matrix(test_set.labels, test_preds)
-    print(f"\nConfusion Matrix (Validation):\n{cm_val}")
-    print(f"Confusion Matrix (Test):\n{cm_test}")
+    cm_test = confusion_matrix(test_set.labels, test_preds)
+
+    df_val = pd.DataFrame(cm_val, index=[f"T_{c}" for c in classes], columns=[f"P_{c}" for c in classes])
+    df_test = pd.DataFrame(cm_test, index=[f"T_{c}" for c in classes], columns=[f"P_{c}" for c in classes])
+
+
+    app_logger.info("\n--- VALIDATION CONFUSION MATRIX ---")
+    app_logger.info(df_val.to_string())
+
+    app_logger.info("\n--- TEST CONFUSION MATRIX ---")
+    app_logger.info(df_test.to_string())
 
     M_val = cm_val.astype('float') / cm_val.sum(axis=1)[:, np.newaxis]
-    M_test = cm_test.astype('float') / cm_test.sum(axis=1)[:, np.newaxis]
-    matrix_dist = np.linalg.norm(M_val - M_test)
-    print(f"\nMatrix Distance (Val vs Test): {matrix_dist:.4f}")
-
     p_true = test_set.prevalence()
+    test_preds = wrapper.predict(test_set.instances)
     p_hat = np.bincount(test_preds, minlength=num_classes) / len(test_preds)
-    print(f"\nTrue Prevalence p(y):{np.round(p_true, 4)}")
-    print(f"Predicted Prev. p(y_hat): {np.round(p_hat, 4)} ")
 
-    M = cm_val.astype('float') / cm_val.sum(axis=1)[:, np.newaxis]
-    try:
-        #  M.T * p_corr = p_hat
-        p_corr = np.linalg.solve(M.T, p_hat)
-        p_corr = np.clip(p_corr, 0, 1)
-        p_corr /= p_corr.sum()
-        print(f"Corrected Prev. (ACC):    {np.round(p_corr, 4)}")
+    app_logger.info(f"True Prev: {np.round(p_true, 4)}")
+    app_logger.info(f"Pred Prev: {np.round(p_hat, 4)}")
 
-        mae_raw = np.abs(p_true - p_hat).mean()
-        mae_corr = np.abs(p_true - p_corr).mean()
-        print(f"\nMAE Raw: {mae_raw:.44f}")
-        print(f"MAE Corrected: {mae_corr:.4f}")
-
-        if mae_corr > mae_raw:
-            print("ACHTUNG: Korrektur war SCHÄDLICH (MAE gestiegen).")
-    except np.linalg.LinAlgError:
-        print("\nMatrix singulär - Gleichungssystem nicht lösbar.")
-
-    print(f"{'=' * 40}\n")
-
-    val_probs = wrapper.predict_proba(val_set.instances)
-    test_probs = wrapper.predict_proba(test_set.instances)
-    M_p_val = np.zeros((num_classes, num_classes))
-    for i in range(num_classes):
-        row_mask = (val_y == i)
-        if row_mask.any():
-            M_p_val[i, :] = val_probs[row_mask].mean(axis=0)
-    M_p_test = np.zeros((num_classes, num_classes))
-    for i in range(num_classes):
-        row_mask = (test_y == i)
-        if row_mask.any():
-            M_p_test[i, :] = test_probs[row_mask].mean(axis=0)
-    p_matrix_dist = np.linalg.norm(M_p_val - M_p_test)
-    print(f"Probabilistic Matrix Distance: {p_matrix_dist:.4f}")
-    p_hat_p = test_probs.mean(axis=0)
-    try:
-        p_corr_pacc = np.linalg.solve(M_p_val.T, p_hat_p)
-        p_corr_pacc = np.clip(p_corr_pacc, 0, 1)
-        p_corr_pacc /= p_corr_pacc.sum()
-
-        mae_pacc = np.abs(p_true - p_corr_pacc).mean()
-        print(f"Corrected Prev. (PACC):   {np.round(p_corr_pacc, 4)}")
-        print(f"MAE PACC: {mae_pacc:.4f}")
-
-        if mae_pacc > mae_raw:
-            print("ACHTUNG: PACC Korrektur war ebenfalls SCHÄDLICH.")
-    except np.linalg.LinAlgError:
-        print("PACC System nicht lösbar.")
+    mae_pred = qp.error.mae(p_true, p_hat)
+    kl_pred = kl_divergence(p_true, p_hat)
+    app_logger.info(f"Prevalence Distances - MAE: {mae_pred:.5f}, KL: {kl_pred:.5f}")
 
     param_grid = {'bandwidth': [0.1,0.15,0.2]}
 
@@ -134,7 +95,7 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
     true_prev = test_set.prevalence()
 
     #plot_probability_distribution(wrapper, val_indices, title="Validation Set Probabilities")
-    print(f"\nTrue prevalence: {np.round(test_set.prevalence(), 4)}")
+    #print(f"\nTrue prevalence: {np.round(test_set.prevalence(), 4)}")
 
     for name, quantifier in quantifiers.items():
         quantifier.fit(val_set.instances, val_set.labels)
@@ -185,6 +146,11 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
             except Exception as e:
                 print(f"SIS-ACC failed {e}")
 
+    table_headers = ["Method", "MAE", "KL"]
+    table_rows = [[r['Method'], f"{r['MAE']:.5f}", f"{r['KL']:.5f}"] for r in run_results]
+    summary_table = tabulate(table_rows, headers=table_headers, tablefmt="grid")
+    app_logger.info(f"\nFinal Results:\n{summary_table}")
+
     return run_results
 
 def parse_args():
@@ -195,10 +161,27 @@ def parse_args():
     parser.add_argument('--run_sis', action='store_true')
     return parser.parse_args()
 
+
+def setup_logger(timestamp):
+    log_dir = Path("quantification/results")
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / f"log_{timestamp}.log"
+
+    l = logging.getLogger("GraphQuant")
+    l.setLevel(logging.DEBUG)
+    l.handlers.clear()
+
+    fh = logging.FileHandler(log_file)
+    fh.setFormatter(logging.Formatter('%(message)s'))
+    l.addHandler(fh)
+
+    return l
+
 if __name__ == '__main__':
     args = parse_args()
     all_experiments = []
     timestamp= datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
+    my_app_logger = setup_logger(timestamp)
     path = Path(__file__).parent / f"results/quantification_results_{timestamp}.csv"
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -206,7 +189,7 @@ if __name__ == '__main__':
         for split in args.splits:
             for model in args.models:
                 try:
-                    result = quantify(dataset, split, model, run_sis = args.run_sis)
+                    result = quantify(dataset, split, model,my_app_logger, run_sis = args.run_sis)
                     all_experiments.extend(result)
                     df_step = pd.DataFrame(result)
                     df_step.to_csv(path, mode='a', index=False, header=not path.exists())
