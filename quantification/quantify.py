@@ -58,12 +58,14 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, app_logger, run_sis = F
     df_val = pd.DataFrame(cm_val, index=[f"T_{c}" for c in classes], columns=[f"P_{c}" for c in classes])
     df_test = pd.DataFrame(cm_test, index=[f"T_{c}" for c in classes], columns=[f"P_{c}" for c in classes])
 
-
     app_logger.info("\n--- VALIDATION CONFUSION MATRIX ---")
     app_logger.info(df_val.to_string())
 
     app_logger.info("\n--- TEST CONFUSION MATRIX ---")
     app_logger.info(df_test.to_string())
+
+    matrix_dist = matrix_distance(cm_val, cm_test)
+    app_logger.info(f"\n --- Matrix Distance --- : {matrix_dist:.5f}")
 
     M_val = cm_val.astype('float') / cm_val.sum(axis=1)[:, np.newaxis]
     p_true = test_set.prevalence()
@@ -176,6 +178,13 @@ def setup_logger(timestamp):
     l.addHandler(fh)
 
     return l
+
+def matrix_distance(cm_val, cm_test):
+    v_norm = cm_val.astype('float') / (cm_val.sum(axis=1)[:, np.newaxis] + 1e-9)
+    t_norm = cm_test.astype('float') / (cm_test.sum(axis=1)[:, np.newaxis] + 1e-9)
+
+    distance = np.linalg.norm(v_norm - t_norm)
+    return distance
 
 if __name__ == '__main__':
     args = parse_args()
