@@ -72,7 +72,7 @@ python train_classifier.py --datasets <dataset_name> --splits <split_1> <split_2
 * --epochs: Number of training epochs
 
 ### Quantification 
-Once models are trained, use quantify.py to estimate class prevalence in the test set. This phase supports standard aggregative quantifiers and custom graph-based SIS methods
+Once models are trained, use quantify.py to estimate class prevalence in the test set. This phase supports aggregative quantifiers and graph-based SIS methods
 ```
 python quantification/quantify.py --datasets <dataset_name> --models GCN --splits <split_name> --run_sis
 ```
@@ -100,14 +100,14 @@ Dataset,Split,Model,Macro_F1
 presidential_election,temporal_shift,GCN,0.8234
 
 quantification_results.csv:
-Dataset,Split,Classifier,Method,MAE
-presidential_election,temporal_shift,GCN,PACC,0.0342
+Dataset,Split,Classifier,Method,MAE,KL
+presidential_election,split_0,GCN,CC,0.0961,0.0316
 
 ```
 
 ## Project Structure
 ```text
-├── train.py                # Main script for training the node classifiers
+├── train_classifier.py     # Main script for training the node classifiers
 ├── create_splits/          # Scripts to define dataset-specific splits
 │   ├── presidential_election/
 │   ├── twitch_gamers/
