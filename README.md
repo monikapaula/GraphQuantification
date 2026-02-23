@@ -107,15 +107,15 @@ presidential_election,split_0,GCN,CC,0.0961,0.0316
 
 ## Project Structure
 ```text
-├── train_classifier.py     # Main script for training the node classifiers
 ├── create_splits/          # Scripts to define dataset-specific splits
 │   ├── presidential_election/
 │   ├── twitch_gamers/
 │   └── ...
 ├── models/                 # Model architectures (GCN, GraphSAGE, MLP)
-├── utils/                  # Helper functions (Metrics, DataLoaders, SIS)
+├── quantification/         # Quantification logic and evaluation
+│   ├── quantify.py         # Main quantification pipeline script
+│   └── results/            # Directory for experiment outputs 
 ├── split_data/             # Processed datasets and split-specific READMEs
-└── quantification/         # Quantification logic and evaluation
-    ├── quantify.py         # Main quantification pipeline script
-    └── results/            # Directory for experiment outputs 
+├── train_classifier.py     # Main script for training the node classifiers
+└── utils/                  # Helper functions (Metrics, DataLoaders, SIS)
 ```

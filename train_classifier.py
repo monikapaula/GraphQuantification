@@ -12,7 +12,7 @@ from create_splits.deezer_europe.deezer_europe_split import get_dataset as get_d
 from create_splits.twitch_gamers.twitch_gamers_split import get_dataset as get_twitch_gamers_dataset
 from create_splits.ogbn_arxiv.ogbn_arxiv_split import get_dataset as get_ogbn_arxiv_dataset
 
-from utils.metrics import classifier_mae, extensive_evaluate, class_balance, macro_f1, compute_class_weights
+from utils.metrics import classifier_mae, extensive_evaluate, macro_f1, compute_class_weights
 from models.gcn import GCN
 from models.mlp import MLP
 from models.graphSage import SAGE
@@ -113,7 +113,6 @@ def train (config: dict, x, edge_index, y, train_mask, val_mask, test_mask, clas
     if best_model_state is not None:
         model.load_state_dict(best_model_state)
 
-    # evaluation on test set using F1 and MAE
     test_acc = extensive_evaluate(model, x, edge_index, test_mask,y)
     print(f"Macro F1-Score: {test_acc:.4f}")
 

@@ -115,7 +115,7 @@ def quantify(DATASET_NAME, SPLIT_NAME, CLASSIFIER_MODEL, run_sis = False):
                 })
 
             except Exception as e:
-                print(f"SIS-ACC failed {e}")
+                print(f"SIS failed {e}")
 
     return run_results
 

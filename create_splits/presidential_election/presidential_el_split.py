@@ -51,12 +51,9 @@ def load_data():
         feature_filename= CONFIG['feature_filename'],
         edges_filename=CONFIG['edges_filename'],
     )
-    #print(features_df.columns)
-    #print(len(features_df.columns))
     return features_df, edges_df
 
 def encode_labels(features_df):
-    #1: Republican, 0: Democrat
     encoder = LabelEncoder()
     encoded_labels = encoder.fit_transform(features_df['Label (County)'].values)
     return encoded_labels
@@ -137,15 +134,3 @@ def get_dataset(split_name):
 if __name__ == '__main__':
     save_splits_pt()
     data, train_mask, val_mask, test_mask = get_dataset(split_name='split_1')
-    print("size training:", train_mask.sum())
-    print("size val:", val_mask.sum())
-    print("size test:", test_mask.sum())
-
-    for name, mask in [("TRAIN", train_mask), ("VAL", val_mask), ("TEST", test_mask)]:
-        y_sub = data.y[mask]
-        total = len(y_sub)
-        rep_count = int(y_sub.sum().item())
-        dem_count = total - rep_count
-
-        print(
-            f"{name:<15} | {total:<10} | {dem_count} ({dem_count / total:.2%}) | {rep_count} ({rep_count / total:.2%}) |")

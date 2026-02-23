@@ -62,7 +62,6 @@ def preprocess_twitch_gamers(df):
         target_df = df[lang]['target_df']
         features_df = df[lang]['features_df']
 
-        # Process Games (MLB -> TFIDF -> SVD)
         game_lists = [features_df.get(str(u_id), []) for u_id in target_df['new_id']]
         curr_games_bin = mlb.transform(game_lists)
         curr_games_tfidf = tfidf.transform(curr_games_bin)
@@ -180,5 +179,5 @@ if __name__ == '__main__':
 
     data = load_twitch_gamers(DATASET_CONFIGS[DATASET_NAME])
     features_df = preprocess_twitch_gamers(data)
-    #save_all_splits_json()
-    #save_splits_pt()
+    save_all_splits_json()
+    save_splits_pt()
